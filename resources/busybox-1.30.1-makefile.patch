@@ -1,0 +1,11 @@
+--- Makefile.orig	2019-05-09 17:02:15.960179200 +0000
++++ Makefile	2019-05-09 16:40:19.722850000 +0000
+@@ -289,7 +289,7 @@
+ # Make variables (CC, etc...)
+ 
+ AS		= $(CROSS_COMPILE)as
+-CC		= $(CROSS_COMPILE)gcc
++#CC		= $(CROSS_COMPILE)gcc
+ LD		= $(CC) -nostdlib
+ CPP		= $(CC) -E
+ AR		= $(CROSS_COMPILE)ar

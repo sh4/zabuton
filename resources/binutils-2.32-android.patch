@@ -1,0 +1,15 @@
+diff --git a/gas/input-file.c b/gas/input-file.c
+index 79910b9d37..a642826d94 100644
+--- a/gas/input-file.c
++++ b/gas/input-file.c
+@@ -163,6 +163,10 @@ input_file_open (const char *filename,
+       return;
+     }
+   gas_assert (c != EOF);
++#ifdef __ANDROID__
++  ungetc (c, f_in);
++  return;
++#endif
+ 
+   if (c == '#')
+     {

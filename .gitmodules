@@ -1,0 +1,9 @@
+[submodule "externals/bash"]
+	path = externals/bash
+	url = https://github.com/sh4/bash.git
+[submodule "externals/avrdude"]
+	path = externals/avrdude
+	url = https://github.com/sh4/avrdude.git
+[submodule "externals/make"]
+	path = externals/make
+	url = https://github.com/sh4/make.git
