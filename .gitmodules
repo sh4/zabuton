@@ -7,3 +7,9 @@
 [submodule "externals/make"]
 	path = externals/make
 	url = https://github.com/sh4/make.git
+[submodule "externals/Android-Terminal-Emulator"]
+	path = externals/Android-Terminal-Emulator
+	url = https://github.com/sh4/Android-Terminal-Emulator.git
+[submodule "externals/usb-serial-for-android"]
+	path = externals/usb-serial-for-android
+	url = https://github.com/sh4/usb-serial-for-android.git

@@ -178,7 +178,8 @@ build_target_avrdude ()
             --prefix=$TARGET_LIBRARY_PREFIX \
     || exit $?; } && \
     PATH=$target_path make -j $MAKE_JOB_COUNT && \
-    PATH=$target_path make install
+    PATH=$target_path make install && \
+    cp -f ./ac_cfg.h $avrdude_root/
 }
 
 build_target_gmp ()

@@ -1,0 +1,8 @@
+include ':app'
+include ':usbSerialForAndroid'
+include ':emulatorview'
+include ':libtermexec'
+
+project(':usbSerialForAndroid').projectDir = new File('../externals/usb-serial-for-android/usbSerialForAndroid')
+project(':emulatorview').projectDir = new File('../externals/Android-Terminal-Emulator/emulatorview')
+project(':libtermexec').projectDir = new File('../externals/Android-Terminal-Emulator/libtermexec')

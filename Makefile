@@ -46,7 +46,7 @@ target_openssl:
 	$(BUILD_COMMAND)
 target_curl: target_openssl
 	$(BUILD_COMMAND)
-target_libgit2: # target_openssl target_libiconv
+target_libgit2: target_openssl target_libiconv
 	$(BUILD_COMMAND)
 target_libiconv:
 	$(BUILD_COMMAND)
