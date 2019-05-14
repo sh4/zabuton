@@ -1,10 +1,11 @@
-#!/bin/sh
+#!/bin/bash
 
 export MAKE_JOB_COUNT=`grep processor /proc/cpuinfo | wc -l`
 export SCRIPT_ROOT="$(dirname "${BASH_SOURCE:-$0}")"
 export ANDROID_NDK_HOME=/android-ndk-r19c
 export ANDROID_NDK_TOOLCHAIN_ROOT=$ANDROID_NDK_HOME/toolchains/llvm/prebuilt/linux-x86_64
-export BUILD_ROOT=$SCRIPT_ROOT/../build
+export ZABUTON_ROOT=$SCRIPT_ROOT/..
+export BUILD_ROOT=$ZABUTON_ROOT/build
 export TARGET_PREFIX=$BUILD_ROOT/root/target
 export TARGET_LIBRARY_PREFIX=$BUILD_ROOT/root/target-lib
 export NATIVE_PREFIX=$BUILD_ROOT/root/native
@@ -68,6 +69,9 @@ fetch_source ()
         local cacert=$TARGET_LIBRARY_PREFIX/ssl/cacert.pem
         [ ! -d $TARGET_LIBRARY_PREFIX/ssl ] && mkdir -p $TARGET_LIBRARY_PREFIX/ssl
         [ ! -f $cacert ] && curl https://curl.haxx.se/ca/cacert.pem -o $TARGET_LIBRARY_PREFIX/ssl/cacert.pem || exit $?
+        ;;
+    "pigz")
+        _fetch_source https://zlib.net/pigz/pigz-2.4.tar.gz
         ;;
     *)
         echo "Cannot recognized fetch source name: $1" >&2 && exit 1
@@ -137,7 +141,7 @@ _fetch_source ()
     esac
     local source_name=${source_file%.tar.*}
     [ -d $source_name ] || tar $tar_option $source_file
-    local source_name_without_ver=${source_name/-*/}
+    local source_name_without_ver=$(echo $source_name | sed -r -e 's/\.tar\..+$//g' -e 's/-[0-9\.]+//g' -e s/-//g)
     local build_root_name="BUILD_${source_name_without_ver^^}_ROOT"
     declare -gx "$build_root_name=$archive_root/$source_name"
 }
@@ -147,3 +151,8 @@ mkdir -p $TARGET_PREFIX $TARGET_LIBRARY_PREFIX $BUILD_ROOT/work/target
 
 . $SCRIPT_ROOT/build_toolchain_native.sh
 . $SCRIPT_ROOT/build_toolchain_target.sh
+
+# $1 = build | clean
+# $2 = target | native
+# $3 = <tool name> 
+$1 $2 $3

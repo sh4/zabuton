@@ -1,3 +1,4 @@
 /build
 /android-ndk-*.zip
 /.vscode
+/sources/app/src/main/assets/build

@@ -4,6 +4,7 @@ target_host=aarch64-linux-android
 target_cflags="$CFLAGS -fPIE -fPIC"
 target_cxxflags="$CXXFLAGS -fPIE -fPIC -static-libstdc++"
 target_path=$ANDROID_NDK_TOOLCHAIN_ROOT/bin:$PATH
+zabuton_assets_root=$ZABUTON_ROOT/sources/app/src/main/assets/build
 
 build_target_busybox ()
 {
@@ -12,12 +13,13 @@ build_target_busybox ()
 
     cd $BUILD_BUSYBOX_ROOT
     cp -pf $SCRIPT_ROOT/busybox-1.30.1.config $BUILD_BUSYBOX_ROOT/.config
-    patch -uN < $SCRIPT_ROOT/busybox-1.30.1-makefile.patch
+    patch -uN < $SCRIPT_ROOT/0001-busybox-1.30.1-makefile.patch
     CC=aarch64-linux-android22-clang \
     PATH=$target_path \
     CFLAGS="$target_cflags -I$ANDROID_NDK_HOME/sysroot/usr/include/aarch64-linux-android -I$ANDROID_NDK_HOME/sysroot/usr/include" \
     CXXFLAGS="$target_cxxflags" \
-    make ARCH=aarch64 CROSS_COMPILE="$cross_compile_prefix-" -j $MAKE_JOB_COUNT
+    make ARCH=aarch64 CROSS_COMPILE="$cross_compile_prefix-" -j $MAKE_JOB_COUNT && \
+    cp -f ./busybox $TARGET_PREFIX/bin/busybox
     cd $cwd
 }
 
@@ -90,7 +92,7 @@ build_target_openssl ()
         -fPIE \
     || exit $?; } && \
     PATH=$target_path make -j $MAKE_JOB_COUNT && \
-    PATH=$target_path make install
+    PATH=$target_path make -j $MAKE_JOB_COUNT install
 }
 
 build_target_libgit2 ()
@@ -134,7 +136,7 @@ build_target_libiconv ()
         --enable-shared=no \
     || exit $?; } && \
     PATH=$target_path make -j $MAKE_JOB_COUNT && \
-    PATH=$target_path make install
+    PATH=$target_path make -j $MAKE_JOB_COUNT install
 }
 
 build_target_curl ()
@@ -160,7 +162,7 @@ build_target_curl ()
         --disable-shared \
     || exit $?; } && \
     PATH=$target_path make -j $MAKE_JOB_COUNT && \
-    PATH=$target_path make install
+    PATH=$target_path make -j $MAKE_JOB_COUNT install
 }
 
 build_target_avrdude ()
@@ -178,8 +180,26 @@ build_target_avrdude ()
             --prefix=$TARGET_LIBRARY_PREFIX \
     || exit $?; } && \
     PATH=$target_path make -j $MAKE_JOB_COUNT && \
-    PATH=$target_path make install && \
-    cp -f ./ac_cfg.h $avrdude_root/
+    PATH=$target_path make -j $MAKE_JOB_COUNT install && \
+    cp -f ./ac_cfg.h $avrdude_root/ && \
+    mkdir -p $zabuton_assets_root && \
+    cp -f $TARGET_LIBRARY_PREFIX/etc/avrdude.conf $zabuton_assets_root/
+}
+
+build_target_pigz ()
+{
+    local cwd=`pwd`
+    cd $BUILD_PIGZ_ROOT
+    patch -p1 -uN < $SCRIPT_ROOT/0001-pigz-2.4-android.patch
+    PATH=$target_path make clean && \
+    PATH=$target_path make \
+        CC=aarch64-linux-android22-clang \
+        CFLAGS="$target_cflags -I$ANDROID_NDK_HOME/sysroot/usr/include" \
+        LIBS="-lm -lz" \
+        -j $MAKE_JOB_COUNT && \
+    mkdir -p $zabuton_assets_root && \
+    cp -pf ./pigz $zabuton_assets_root/
+    cd $cwd
 }
 
 build_target_gmp ()
@@ -217,7 +237,7 @@ build_target_isl ()
         --with-gmp-prefix=$TARGET_PREFIX \
     || exit $?; } && \
     PATH=$target_path LDFLAGS="$LDFLAGS -L$TARGET_PREFIX/lib -lgmp" make -j $MAKE_JOB_COUNT && \
-    PATH=$target_path LDFLAGS="$LDFLAGS -L$TARGET_PREFIX/lib -lgmp" make install
+    PATH=$target_path LDFLAGS="$LDFLAGS -L$TARGET_PREFIX/lib -lgmp" make install -j $MAKE_JOB_COUNT
 }
 
 build_target_mpfr ()
@@ -236,7 +256,7 @@ build_target_mpfr ()
         --with-gmp=$TARGET_PREFIX \
     || exit $?; } && \
     PATH=$target_path make -j $MAKE_JOB_COUNT && \
-    PATH=$target_path make install
+    PATH=$target_path make install -j $MAKE_JOB_COUNT
 }
 
 build_target_mpc ()
@@ -255,7 +275,7 @@ build_target_mpc ()
         --with-mpfr=$TARGET_PREFIX \
     || exit $?; } && \
     PATH=$target_path make -j $MAKE_JOB_COUNT && \
-    PATH=$target_path make install
+    PATH=$target_path make install -j $MAKE_JOB_COUNT
 }
 
 build_target_binutils ()
@@ -263,7 +283,7 @@ build_target_binutils ()
     local cwd=`pwd`
     [ -e $BUILD_BINUTILS_ROOT/configure ] || { echo "Not found: $BUILD_BINUTILS_ROOT/configure" >&2; exit 1; }
     cd $BUILD_BINUTILS_ROOT
-    patch -p1 -uN < $SCRIPT_ROOT/binutils-2.32-android.patch
+    patch -p1 -uN < $SCRIPT_ROOT/0001-binutils-2.32-android.patch
     cd $cwd
     { [ -f Makefile ] || \
     PATH=$target_path  \
@@ -281,7 +301,7 @@ build_target_binutils ()
         --with-mpc=$TARGET_PREFIX \
     || exit $?; } && \
     PATH=$target_path make -j $MAKE_JOB_COUNT && \
-    PATH=$target_path make install
+    PATH=$target_path make install -j $MAKE_JOB_COUNT
 }
 
 build_target_gcc ()
@@ -329,7 +349,7 @@ build_target_gcc ()
     make -j $MAKE_JOB_COUNT && \
     PATH=$gcc_target_path \
     LD_LIBRARY_PATH=$NATIVE_PREFIX/lib \
-    make install
+    make install -j $MAKE_JOB_COUNT
 }
 
 build_target_avrlibc ()
@@ -339,7 +359,7 @@ build_target_avrlibc ()
     { [ -f Makefile ] || \
     CFLAGS="$target_cflags" \
     CXXFLAGS="$target_cxxflags" \
-    PATH=$avrpath
+    PATH=$avrpath \
     AR=avr-ar \
     AS=avr-as \
     CC=avr-gcc \
@@ -351,5 +371,5 @@ build_target_avrlibc ()
         --host=avr \
     || exit $?; } && \
     PATH=$avrpath make -j $MAKE_JOB_COUNT && \
-    PATH=$avrpath make install
+    PATH=$avrpath make install -j $MAKE_JOB_COUNT
 }

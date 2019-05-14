@@ -1,52 +1,80 @@
-BUILD_TOOLCHAIN := $(dir $(abspath $(lastword $(MAKEFILE_LIST))))resources/build_toolchain.sh
-BUILD_COMMAND = \
-	@bash -c "source $(BUILD_TOOLCHAIN) && build $(patsubst target_%,target %,$(patsubst native_%,native %,$@))"
-CLEAN_COMMAND = \
-	@bash -c "source $(BUILD_TOOLCHAIN) && clean $(patsubst target_%,target %,$(patsubst native_%,native %,$@))"
+BUILD_ROOT := $(dir $(abspath $(lastword $(MAKEFILE_LIST))))
+BUILD_TOOLCHAIN := $(BUILD_ROOT)resources/build_toolchain.sh
+BUILD_COMMAND := @$(BUILD_TOOLCHAIN) build
+CLEAN_COMMAND := @$(BUILD_TOOLCHAIN) clean
+ZABUTON_ASSETS_ROOT := $(BUILD_ROOT)sources/app/src/main/assets/build
+TARGET_ROOT := $(BUILD_ROOT)build/root/target
+NATIVE_ROOT := $(BUILD_ROOT)build/root/native
+TARGET_LIB_ROOT := $(BUILD_ROOT)build/root/target-lib
+TARGET_TOOLS := $(TARGET_ROOT)/bin/avr-gcc \
+	$(TARGET_ROOT)/avr/lib/libc.a \
+	$(TARGET_ROOT)/avr/bin/ar \
+	$(TARGET_ROOT)/bin/busybox \
+	$(TARGET_ROOT)/bin/make \
+	$(TARGET_ROOT)/bin/bash
+NATIVE_GCC_LIBS := $(NATIVE_ROOT)/lib/libgmp.a \
+	$(NATIVE_ROOT)/lib/libmpfr.a \
+	$(NATIVE_ROOT)/lib/libmpc.a \
+	$(NATIVE_ROOT)/lib/libisl.a
+TARGET_GCC_LIBS := 	$(NATIVE_ROOT)/bin/avr-gcc \
+	$(TARGET_ROOT)/lib/libgmp.a \
+	$(TARGET_ROOT)/lib/libmpfr.a \
+	$(TARGET_ROOT)/lib/libmpc.a \
+	$(TARGET_ROOT)/lib/libisl.a
 
-all: native_% target_%
+all: $(ZABUTON_ASSETS_ROOT)/avr-gcc.tar.gz $(ZABUTON_ASSETS_ROOT)/pigz lib
+lib: $(TARGET_LIB_ROOT)/lib/libavrdude.a $(TARGET_LIB_ROOT)/lib/libcurl.a $(TARGET_LIB_ROOT)/lib/libgit2.a
 
-native_gcc: native_gmp native_mpfr native_mpc native_isl
-	$(BUILD_COMMAND)
-native_gmp:
-	$(BUILD_COMMAND)
-native_mpfr: native_gmp 
-	$(BUILD_COMMAND)
-native_mpc: native_gmp
-	$(BUILD_COMMAND)
-native_isl: native_gmp
-	$(BUILD_COMMAND)
-native_binutils:
-	$(BUILD_COMMAND)
+$(ZABUTON_ASSETS_ROOT)/avr-gcc.tar.gz: $(TARGET_TOOLS)
+	cd $(BULID_ROOT)build/root/target && tar czvf $(ZABUTON_ASSETS_ROOT)/avr-gcc.tar.gz *
+$(ZABUTON_ASSETS_ROOT)/pigz:
+	$(BUILD_COMMAND) target pigz
+$(NATIVE_ROOT)/bin/avr-gcc: $(NATIVE_GCC_LIBS)
+	$(BUILD_COMMAND) native gcc
+$(NATIVE_ROOT)/lib/libgmp.a:
+	$(BUILD_COMMAND) native gmp
+$(NATIVE_ROOT)/lib/libmpfr.a: $(NATIVE_ROOT)/lib/libgmp.a 
+	$(BUILD_COMMAND) native mpfr
+$(NATIVE_ROOT)/lib/libmpc.a: $(NATIVE_ROOT)/lib/libgmp.a
+	$(BUILD_COMMAND) native mpc
+$(NATIVE_ROOT)/lib/libisl.a: $(NATIVE_ROOT)/lib/libgmp.a
+	$(BUILD_COMMAND) native isl
+$(NATIVE_ROOT)/avr/bin/ar:
+	$(BUILD_COMMAND) native binutils
 
-target_gcc: target_gmp target_mpfr target_mpc target_isl
-	$(BUILD_COMMAND)
-target_gmp:
-	$(BUILD_COMMAND)
-target_mpfr: target_gmp 
-	$(BUILD_COMMAND)
-target_mpc: target_gmp
-	$(BUILD_COMMAND)
-target_isl: target_gmp
-	$(BUILD_COMMAND)
-target_binutils:
-	$(BUILD_COMMAND)
-target_avrlibc: target_gcc target_binutils
-	$(BUILD_COMMAND)
+$(TARGET_ROOT)/bin/avr-gcc: $(TARGET_GCC_LIBS)
+	$(BUILD_COMMAND) target gcc
+$(TARGET_ROOT)/lib/libgmp.a:
+	$(BUILD_COMMAND) target gmp
+$(TARGET_ROOT)/lib/libmpfr.a: $(TARGET_ROOT)/lib/libgmp.a 
+	$(BUILD_COMMAND) target mpfr
+$(TARGET_ROOT)/lib/libmpc.a: $(TARGET_ROOT)/lib/libgmp.a
+	$(BUILD_COMMAND) target mpc
+$(TARGET_ROOT)/lib/libisl.a: $(TARGET_ROOT)/lib/libgmp.a
+	$(BUILD_COMMAND) target isl
+$(TARGET_ROOT)/avr/bin/ar:
+	$(BUILD_COMMAND) target binutils
+$(TARGET_ROOT)/avr/lib/libc.a: $(TARGET_ROOT)/bin/avr-gcc $(TARGET_ROOT)/avr/bin/ar
+	$(BUILD_COMMAND) target avrlibc
+$(TARGET_ROOT)/bin/busybox: 
+	$(BUILD_COMMAND) target busybox
+$(TARGET_ROOT)/bin/make: $(wildcard $(BUILD_ROOT)externals/make/src/*.c $(BUILD_ROOT)externals/make/src/*.h)
+	$(BUILD_COMMAND) target make
+$(TARGET_ROOT)/bin/bash:
+	$(BUILD_COMMAND) target bash
 
-target_busybox:
-	$(BUILD_COMMAND)
-target_make:
-	$(BUILD_COMMAND)
-target_bash:
-	$(BUILD_COMMAND)
-target_avrdude:
-	$(BUILD_COMMAND)
-target_openssl:
-	$(BUILD_COMMAND)
-target_curl: target_openssl
-	$(BUILD_COMMAND)
-target_libgit2: target_openssl target_libiconv
-	$(BUILD_COMMAND)
-target_libiconv:
-	$(BUILD_COMMAND)
+AVRDUDE_DEPS := $(filter-out $(BUILD_ROOT)externals/avrdude/ac_cfg.h, \
+	$(wildcard \
+		$(BUILD_ROOT)externals/avrdude/*.c \
+		$(BUILD_ROOT)externals/avrdude/*.h))
+
+$(TARGET_LIB_ROOT)/lib/libavrdude.a: $(AVRDUDE_DEPS)
+	$(BUILD_COMMAND) target avrdude
+$(TARGET_LIB_ROOT)/lib/libssl.a:
+	$(BUILD_COMMAND) target openssl
+$(TARGET_LIB_ROOT)/lib/libcurl.a: $(TARGET_LIB_ROOT)/lib/libssl.a
+	$(BUILD_COMMAND) target curl
+$(TARGET_LIB_ROOT)/lib/libgit2.a: $(TARGET_LIB_ROOT)/lib/libssl.a $(TARGET_LIB_ROOT)/lib/libiconv.a
+	$(BUILD_COMMAND) target libgit2
+$(TARGET_LIB_ROOT)/lib/libiconv.a:
+	$(BUILD_COMMAND) target libiconv
