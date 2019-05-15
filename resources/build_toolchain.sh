@@ -152,7 +152,20 @@ mkdir -p $TARGET_PREFIX $TARGET_LIBRARY_PREFIX $BUILD_ROOT/work/target
 . $SCRIPT_ROOT/build_toolchain_native.sh
 . $SCRIPT_ROOT/build_toolchain_target.sh
 
+if [ "$#" -ne 3 ]; then
+    echo "AVR GCC Toolchain for Android Build Script"
+    echo ""
+    echo "Usage: $0 [bulid|clean] [native|target] [tool]"
+    echo ""
+    echo "Available tools:"
+    echo "  (GCC related tools) gcc, gmp, mpfr, mpc, isl, binutils, avrlibc"
+    echo "  (Shell utlis) busybox, make, bash"
+    echo "  (Libraries) avrdude, openssl, curl, libgit2, libiconv"
+    exit 1
+fi
+
+# Usage:
 # $1 = build | clean
 # $2 = target | native
-# $3 = <tool name> 
+# $3 = [tool] 
 $1 $2 $3
