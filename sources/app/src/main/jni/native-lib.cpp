@@ -7,6 +7,7 @@
 #include <unistd.h>
 #include <android/log.h>
 #include "native-lib.h"
+#include <git2.h>
 
 namespace
 {
@@ -412,9 +413,9 @@ void UsbSerialPort_Log(int loglevel, const char* message)
 
 extern "C"
 JNIEXPORT void JNICALL
-Java_com_example_user_andoirdapp_MainActivity_writeFirmwareInAvrdude(
+Java_io_github_sh4_zabuton_programmer_Avrdude_programming(
         JNIEnv *env,
-        jobject /*this*/,
+        jclass /*type*/,
         jobject serialPort,
         jstring configFilePath_,
         jstring hexFilePath_)
@@ -442,9 +443,8 @@ Java_com_example_user_andoirdapp_MainActivity_writeFirmwareInAvrdude(
 
 extern "C"
 JNIEXPORT jstring JNICALL
-Java_com_example_user_andoirdapp_MainActivity_dequeueAvrdudeMessage(
-        JNIEnv *env,
-        jobject /* this */)
+Java_io_github_sh4_zabuton_programmer_Avrdude_dequeueMessage(JNIEnv *env,
+        jclass /*type*/)
 {
     std::lock_guard<std::mutex> lock(g_AvrdudeLogMutex);
     if (g_AvrdudeLogQueue.empty()) {
@@ -453,4 +453,11 @@ Java_com_example_user_andoirdapp_MainActivity_dequeueAvrdudeMessage(
     jstring message = env->NewStringUTF(g_AvrdudeLogQueue.front().c_str());
     g_AvrdudeLogQueue.pop();
     return message;
+}
+
+extern "C"
+JNIEXPORT void JNICALL
+Java_io_github_sh4_zabuton_git_LibGit2_init(JNIEnv *env, jclass /*type*/)
+{
+    git_libgit2_init();
 }

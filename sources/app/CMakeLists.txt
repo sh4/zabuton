@@ -5,7 +5,7 @@
 
 cmake_minimum_required(VERSION 3.4.1)
 
-link_directories(../../build/root/target-lib/lib/)
+link_directories(../../build/root/target-lib/lib)
 
 # Creates and names a library, sets it as either STATIC
 # or SHARED, and provides the relative paths to its source code.
@@ -24,6 +24,7 @@ add_library(
 )
 
 include_directories(../../externals/avrdude)
+include_directories(../../build/root/target-lib/include)
 
 # Searches for a specified prebuilt library and stores the path as a
 # variable. Because CMake includes system libraries in the search path by
@@ -47,14 +48,18 @@ target_link_libraries(
         # Specifies the target library.
         native-lib
 
+        -Wl,--start-group
         avrdude
         iconv
+        charset
         ssl
         crypto
-        curl
+        #curl
         git2
 
         # Links the target library to the log library
         # included in the NDK.
         ${log-lib}
+
+        -Wl,--end-group
 )

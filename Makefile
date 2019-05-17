@@ -1,6 +1,6 @@
 BUILD_ROOT := $(dir $(abspath $(lastword $(MAKEFILE_LIST))))
 BUILD_TOOLCHAIN := $(BUILD_ROOT)resources/build_toolchain.sh
-BUILD_COMMAND := @$(BUILD_TOOLCHAIN) build
+BUILD_COMMAND := @CLEAN=$(CLEAN) $(BUILD_TOOLCHAIN) build
 CLEAN_COMMAND := @$(BUILD_TOOLCHAIN) clean
 ZABUTON_ASSETS_ROOT := $(BUILD_ROOT)sources/app/src/main/assets/build
 TARGET_ROOT := $(BUILD_ROOT)build/root/target
@@ -22,11 +22,16 @@ TARGET_GCC_LIBS := 	$(NATIVE_ROOT)/bin/avr-gcc \
 	$(TARGET_ROOT)/lib/libmpc.a \
 	$(TARGET_ROOT)/lib/libisl.a
 
-all: $(ZABUTON_ASSETS_ROOT)/avr-gcc.tar.gz $(ZABUTON_ASSETS_ROOT)/pigz lib
-lib: $(TARGET_LIB_ROOT)/lib/libavrdude.a $(TARGET_LIB_ROOT)/lib/libcurl.a $(TARGET_LIB_ROOT)/lib/libgit2.a
+CLEAN := false
+BUILD_AREA := target # or "native"
+NAME :=
+
+all: $(ZABUTON_ASSETS_ROOT)/avr-gcc.tar.gz $(ZABUTON_ASSETS_ROOT)/pigz $(TARGET_LIB_ROOT)/lib/libavrdude.a $(TARGET_LIB_ROOT)/lib/libcurl.a $(TARGET_LIB_ROOT)/lib/libgit2.a
+lib:
+	$(BUILD_COMMAND) $(BUILD_AREA) $(NAME)
 
 $(ZABUTON_ASSETS_ROOT)/avr-gcc.tar.gz: $(TARGET_TOOLS)
-	cd $(BULID_ROOT)build/root/target && tar czvf $(ZABUTON_ASSETS_ROOT)/avr-gcc.tar.gz *
+	cd $(BULID_ROOT)build/root/target && tar czvf $(ZABUTON_ASSETS_ROOT)/avr-gcc.tar.gz --exclude=share * --hard-dereference
 $(ZABUTON_ASSETS_ROOT)/pigz:
 	$(BUILD_COMMAND) target pigz
 $(NATIVE_ROOT)/bin/avr-gcc: $(NATIVE_GCC_LIBS)

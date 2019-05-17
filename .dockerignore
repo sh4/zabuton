@@ -1,4 +1,6 @@
 /.git
+/.vscode
 /build
 /externals
 /resources
+/sources

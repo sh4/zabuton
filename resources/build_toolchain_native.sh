@@ -1,4 +1,4 @@
-#!/bin/sh
+#!/bin/bash
 
 build_native_gmp ()
 {
@@ -9,7 +9,8 @@ build_native_gmp ()
         --with-pic \
     || exit $?; } && \
     make -j $MAKE_JOB_COUNT && \
-    make install
+    make -j $MAKE_JOB_COUNT install \
+    || exit $?
 }
 
 build_native_isl ()
@@ -23,7 +24,8 @@ build_native_isl ()
         --with-gmp-prefix=$NATIVE_PREFIX \
     || exit $?; } && \
     LDFLAGS="$LDFLAGS -L$NATIVE_PREFIX/lib -lgmp" make -j $MAKE_JOB_COUNT && \
-    LDFLAGS="$LDFLAGS -L$NATIVE_PREFIX/lib -lgmp" make install
+    LDFLAGS="$LDFLAGS -L$NATIVE_PREFIX/lib -lgmp" make -j $MAKE_JOB_COUNT install \
+    || exit $?
 }
 
 build_native_mpfr ()
@@ -36,7 +38,8 @@ build_native_mpfr ()
         --with-gmp=$NATIVE_PREFIX \
     || exit $?; } && \
     make -j $MAKE_JOB_COUNT && \
-    make install
+    make -j $MAKE_JOB_COUNT install \
+    || exit $?
 }
 
 build_native_mpc ()
@@ -49,7 +52,8 @@ build_native_mpc ()
         --with-mpfr=$NATIVE_PREFIX \
     || exit $?; } && \
     make -j $MAKE_JOB_COUNT &&
-    make install
+    make -j $MAKE_JOB_COUNT install \
+    || exit $?
 }
 
 build_native_binutils ()
@@ -65,7 +69,8 @@ build_native_binutils ()
         --with-mpc=$NATIVE_PREFIX \
     || exit $?; } && \
     make -j $MAKE_JOB_COUNT && \
-    make install
+    make -j $MAKE_JOB_COUNT install \
+    || exit $?
 }
 
 build_native_gcc ()
@@ -100,5 +105,6 @@ build_native_gcc ()
     make -j $MAKE_JOB_COUNT && \
     PATH=$NATIVE_PREFIX/bin:$PATH \
     LD_LIBRARY_PATH=$NATIVE_PREFIX/lib \
-    make install
+    make -j $MAKE_JOB_COUNT install \
+    || exit $?
 }

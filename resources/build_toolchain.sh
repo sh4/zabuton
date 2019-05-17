@@ -8,6 +8,7 @@ export ZABUTON_ROOT=$SCRIPT_ROOT/..
 export BUILD_ROOT=$ZABUTON_ROOT/build
 export TARGET_PREFIX=$BUILD_ROOT/root/target
 export TARGET_LIBRARY_PREFIX=$BUILD_ROOT/root/target-lib
+export TARGET_GCC_LIB_PREFIX=$BUILD_ROOT/root/target-gcc-lib
 export NATIVE_PREFIX=$BUILD_ROOT/root/native
 export ORIGINAL_PATH=$PATH
 
@@ -51,12 +52,12 @@ fetch_source ()
             local cwd=`pwd`
             mkdir bash-5.0-patches && cd bash-5.0-patches && \
             curl -O 'https://ftp.gnu.org/gnu/bash/bash-5.0-patches/bash50-[001-007]' || exit $?
-            cd $BUILD_BASH_ROOT
-            for file in $BUILD_BASH_ROOT/../bash-5.0-patches/*; do
-                patch -p0 -i $file
-            done
-            cd $cwd
         }
+        cd $BUILD_BASH_ROOT
+        for file in $BUILD_BASH_ROOT/../bash-5.0-patches/*; do
+            patch -N -r - -p0 -i $file
+        done
+        cd $cwd
         ;;
     "libgit2")
         _fetch_source https://codeload.github.com/libgit2/libgit2/tar.gz/v0.28.1 libgit2-0.28.1.tar.gz
@@ -68,7 +69,7 @@ fetch_source ()
         _fetch_source https://curl.haxx.se/download/curl-7.64.1.tar.gz
         local cacert=$TARGET_LIBRARY_PREFIX/ssl/cacert.pem
         [ ! -d $TARGET_LIBRARY_PREFIX/ssl ] && mkdir -p $TARGET_LIBRARY_PREFIX/ssl
-        [ ! -f $cacert ] && curl https://curl.haxx.se/ca/cacert.pem -o $TARGET_LIBRARY_PREFIX/ssl/cacert.pem || exit $?
+        [ -f $cacert ] || curl https://curl.haxx.se/ca/cacert.pem -o $TARGET_LIBRARY_PREFIX/ssl/cacert.pem || exit $?
         ;;
     "pigz")
         _fetch_source https://zlib.net/pigz/pigz-2.4.tar.gz
@@ -83,22 +84,30 @@ clean ()
 	echo ============================================================
     echo [CLEAN] $2
     echo ============================================================
+    local cwd=`pwd`
+    local tool_root=$BUILD_ROOT/work/$1/$2
     case "$2" in
     "busybox")
-        local cwd=`pwd`
         fetch_source "busybox"
         cd $BUILD_BUSYBOX_ROOT
         make clean -j $MAKE_JOB_COUNT
         cd $cwd
+        return 0
         ;;
-    *)
-        local root=$BUILD_ROOT/work/$1/$2
-        [ -d $root ] && rm -rf $root && echo Removed: $root
+    "avrdude")
+        cd $BUILD_ROOT/../externals/avrdude
+        git clean -xdf .
+        cd $cwd
+        ;;
     esac
+    [ -d $tool_root ] && rm -rf $tool_root && echo Removed: $tool_root
 }
 
 build ()
 {
+    if [ "$CLEAN" = "true" ]; then
+        clean $1 $2
+    fi
 	echo ============================================================
     echo [BUILD] $2
     echo ============================================================
@@ -141,13 +150,14 @@ _fetch_source ()
     esac
     local source_name=${source_file%.tar.*}
     [ -d $source_name ] || tar $tar_option $source_file
-    local source_name_without_ver=$(echo $source_name | sed -r -e 's/\.tar\..+$//g' -e 's/-[0-9\.]+//g' -e s/-//g)
+    local source_name_without_ver=$(echo $source_name | sed -r -e 's/\.tar\..+$//g' -e 's/-[0-9](\.[0-9a-z]+)*$//g' -e s/-//g)
     local build_root_name="BUILD_${source_name_without_ver^^}_ROOT"
+    echo "$build_root_name=$archive_root/$source_name"
     declare -gx "$build_root_name=$archive_root/$source_name"
 }
 
 mkdir -p $NATIVE_PREFIX $BUILD_ROOT/work/native
-mkdir -p $TARGET_PREFIX $TARGET_LIBRARY_PREFIX $BUILD_ROOT/work/target
+mkdir -p $TARGET_PREFIX $TARGET_LIBRARY_PREFIX $TARGET_GCC_LIB_PREFIX $BUILD_ROOT/work/target
 
 . $SCRIPT_ROOT/build_toolchain_native.sh
 . $SCRIPT_ROOT/build_toolchain_target.sh

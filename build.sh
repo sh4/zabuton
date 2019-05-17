@@ -7,7 +7,7 @@ usage ()
 {
     echo "AVR GCC toolchain for Android Build script"
     echo ""
-    echo "Usage: $0 [docker|tolchain]"
+    echo "Usage: $0 [docker|toolchain]"
     echo ""
     echo "  docker:"
     echo "    Build docker image for AVR GCC toolchain build."
@@ -17,7 +17,18 @@ usage ()
     echo "" 
 }
 
-if [ "$#" -ne 1 ]; then
+docker_build_if_not_exists ()
+{
+    if [ "$(docker image ls zabuton:latest -q)" = "" ]; then
+        docker build -t $tag "$root"
+        exitcode=$?
+        if [ $exitcode -ne 0 ]; then
+            exit $exitcode
+        fi
+    fi
+}
+
+if [ "$#" -lt 1 ]; then
     usage
     exit 2
 fi
@@ -37,14 +48,13 @@ case "$1" in
     exit $?
     ;;
 "toolchain")
-    if [ "$(docker image ls zabuton:latest -q)" = "" ]; then
-        docker build -t $tag "$root"
-        exitcode=$?
-        if [ $exitcode -ne 0 ]; then
-            exit $exitcode
-        fi
-    fi
-    docker run -v "$root:/zabuton" -w /zabuton $tag make
+    docker_build_if_not_exists
+    shift
+    docker run -v "$root:/zabuton" -w /zabuton $tag make $*
+    exit $?
+    ;;
+"debug")
+    docker run -v "$root:/zabuton" -w /zabuton -it $tag
     exit $?
     ;;
 *)

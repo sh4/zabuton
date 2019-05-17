@@ -1,0 +1,10 @@
+--- a/configure.ac	2019-01-02 14:39:11.000000000 +0000
++++ b/configure.ac	2019-05-18 22:58:16.834405600 +0000
+@@ -1107,6 +1107,7 @@
+ solaris2.10*)	LOCAL_CFLAGS=-DSOLARIS  ;;
+ solaris2*)	LOCAL_CFLAGS=-DSOLARIS ;;
+ lynxos*)	LOCAL_CFLAGS=-DRECYCLES_PIDS ;;
++*android*)	LOCAL_LDFLAGS= ;;
+ linux*)		LOCAL_LDFLAGS=-rdynamic		 # allow dynamic loading
+ 		case "`uname -r`" in
+ 		1.*|2.[[0123]]*)	: ;;
