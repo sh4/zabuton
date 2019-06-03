@@ -3,7 +3,9 @@
 
 # Sets the minimum version of CMake required to build the native library.
 
-cmake_minimum_required(VERSION 3.4.1)
+cmake_minimum_required(VERSION 3.10.2)
+
+set(CMAKE_CXX_STANDARD 17)
 
 link_directories(../../build/root/target-lib/lib)
 
@@ -21,6 +23,7 @@ add_library(
 
         # Provides a relative path to your source file(s).
         src/main/jni/native-lib.cpp
+        src/main/jni/libgit2-wrapper.cpp
 )
 
 include_directories(../../externals/avrdude)
@@ -54,7 +57,7 @@ target_link_libraries(
         charset
         ssl
         crypto
-        #curl
+        curl
         git2
 
         # Links the target library to the log library

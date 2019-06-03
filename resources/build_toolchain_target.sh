@@ -101,7 +101,7 @@ build_target_openssl ()
     CC=$target_cc \
     CXX=$target_cxx \
     $BUILD_OPENSSL_ROOT/Configure android-arm64 \
-        threads zlib-dynamic no-rc4 no-stdio no-tests no-shared no-asm no-sse2 \
+        threads zlib-dynamic no-rc4 no-tests no-shared no-asm no-sse2 \
         --prefix=$TARGET_LIBRARY_PREFIX \
         -fPIE \
     || exit $?; } && \
@@ -132,7 +132,8 @@ build_target_libgit2 ()
     PATH=$target_path \
     cmake --build . -- -j $MAKE_JOB_COUNT &&
     PATH=$target_path \
-    cmake --build . --target install \
+    cmake --build . --target install && \
+    cp -f $TARGET_LIBRARY_PREFIX/ssl/cacert.pem $zabuton_assets_root \
     || exit $?
 }
 

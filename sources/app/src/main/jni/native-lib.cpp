@@ -7,7 +7,6 @@
 #include <unistd.h>
 #include <android/log.h>
 #include "native-lib.h"
-#include <git2.h>
 
 namespace
 {
@@ -324,7 +323,6 @@ void ProgrammingFirmware(UsbSerialPort& port, const char* hexFilePath)
     updates = nullptr;
 }
 
-
 }
 
 extern "C"
@@ -453,11 +451,4 @@ Java_io_github_sh4_zabuton_programmer_Avrdude_dequeueMessage(JNIEnv *env,
     jstring message = env->NewStringUTF(g_AvrdudeLogQueue.front().c_str());
     g_AvrdudeLogQueue.pop();
     return message;
-}
-
-extern "C"
-JNIEXPORT void JNICALL
-Java_io_github_sh4_zabuton_git_LibGit2_init(JNIEnv *env, jclass /*type*/)
-{
-    git_libgit2_init();
 }
