@@ -41,7 +41,14 @@ lib:
 	$(BUILD_COMMAND) $(BUILD_AREA) $(NAME)
 
 $(ZABUTON_ASSETS_ROOT)/avr-gcc.tar.gz: $(TARGET_TOOLS)
-	cd $(BULID_ROOT)build/root/target && tar czvf $(ZABUTON_ASSETS_ROOT)/avr-gcc.tar.gz --exclude=share * --hard-dereference
+	cd $(BULID_ROOT)build/root/target && \
+	tar czvf $(ZABUTON_ASSETS_ROOT)/avr-gcc.tar.gz \
+		--exclude=share/doc \
+		--exclude=share/info \
+		--exclude=share/man \
+		--exclude=share/vim/vim81/doc \
+		--exclude=share/vim/vim81/tutor \
+		* --hard-dereference
 $(ZABUTON_ASSETS_ROOT)/pigz:
 	$(BUILD_COMMAND) target pigz
 $(NATIVE_ROOT)/bin/avr-gcc: $(NATIVE_GCC_LIBS) $(NATIVE_ROOT)/avr/bin/ar
