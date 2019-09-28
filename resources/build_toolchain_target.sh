@@ -6,6 +6,7 @@ target_cxx=aarch64-linux-android23-clang++
 target_cflags="-fPIE -fPIC"
 target_cxxflags="-fPIE -fPIC -static-libstdc++"
 target_path=$ANDROID_NDK_TOOLCHAIN_ROOT/bin:$PATH
+target_arch_path=$ANDROID_NDK_TOOLCHAIN_ROOT/aarch64-linux-android/bin:$target_path
 target_strip=$ANDROID_NDK_TOOLCHAIN_ROOT/bin/aarch64-linux-android-strip
 
 zabuton_assets_root=$ZABUTON_ROOT/sources/app/src/main/assets/build
@@ -34,9 +35,8 @@ build_target_make ()
     local cwd=`pwd`
     local make_root=$SCRIPT_ROOT/../externals/make
     cd $make_root
-    { [ -f configure ] || PATH=$target_path ./bootstrap --skip-po || exit $?; } && \
-    cd $cwd \
-    && \
+    { [ -f configure -a -f install.sh ] || PATH=$target_path ./bootstrap --skip-po || exit $?; } && \
+    cd $cwd && \
     { [ -f Makefile ] || \
     PATH=$target_path \
     CFLAGS="$target_cflags -static" \
@@ -63,7 +63,7 @@ build_target_bash ()
     cd $BUILD_BASH_ROOT
     patch -N -r - -p1 < $SCRIPT_ROOT/0001-bash-5.0-android.patch
     autoconf
-    cd $cwd
+    cd $cwd &&
     { [ -f Makefile ] || \
     PATH=$target_path \
     CFLAGS="$target_cflags -static" \
@@ -188,7 +188,7 @@ build_target_avrdude ()
 {
     local cwd=`pwd`
     local avrdude_root=$SCRIPT_ROOT/../externals/avrdude
-    { [ -f $avrdude_root/configure ] || (cd $avrdude_root && PATH=$target_path ./bootstrap) || exit $?; }
+    { [ -f $avrdude_root/configure -a -f $avrdude_root/ltmain.sh ] || (cd $avrdude_root && PATH=$target_path ./bootstrap) || exit $?; }
     cd $cwd
     { [ -f Makefile ] || \
         PATH=$target_path \
@@ -402,5 +402,60 @@ build_target_avrlibc ()
     || exit $?; } && \
     PATH=$avrpath make -j $MAKE_JOB_COUNT && \
     PATH=$avrpath make install -j $MAKE_JOB_COUNT \
+    || exit $?
+}
+
+build_target_vim ()
+{
+    local cwd=`pwd`
+    local vim_root=$SCRIPT_ROOT/../externals/vim
+
+    cd $vim_root/src
+    PATH=$target_path \
+    CFLAGS="$target_cflags" \
+    LDFLAGS="$LDFLAGS -static -L$TARGET_LIBRARY_PREFIX/lib" \
+    CXXFLAGS="$target_cxxflags" \
+    CC=$target_cc \
+    CXX=$target_cxx \
+    vim_cv_toupper_broken=yes \
+    vim_cv_terminfo=yes \
+    vim_cv_tty_group=shell \
+    vim_cv_tty_mode=0620 \
+    vim_cv_getcwd_broken=yes \
+    vim_cv_stat_ignores_slash=yes \
+    vim_cv_memmove_handles_overlap=yes \
+    vim_cv_tgetent=non-zero \
+    ./configure \
+        --prefix=$TARGET_PREFIX \
+        --host=$target_host \
+        --with-tlib=ncurses \
+        --disable-nls && \
+    PATH=$target_path make -j $MAKE_JOB_COUNT && \
+    PATH=$target_arch_path make install -j $MAKE_JOB_COUNT && \
+    rm -f $TARGET_PREFIX/bin/{ex,rview,rvim,view,vimdiff,vimtutor,xxd} \
+    || exit $?
+    cd $cwd
+}
+
+build_target_ncurses ()
+{
+    # avoid 'install' command with --strip 
+    [ -e $BUILD_NCURSES_ROOT/configure ] || { echo "Not found: $BUILD_NCURSES_ROOT/configure" >&2; exit 1; }
+    { [ -f Makefile ] || \
+    PATH=$target_path  \
+    CFLAGS="$target_cflags" \
+    CXXFLAGS="$target_cxxflags" \
+    CC=$target_cc \
+    CXX=$target_cxx \
+    $BUILD_NCURSES_ROOT/configure \
+        --prefix=$TARGET_LIBRARY_PREFIX \
+        --host=$target_host \
+        --without-cxx \
+        --without-cxx-binding \
+        --enable-static \
+        --disable-shared \
+    || exit $?; } && \
+    PATH=$target_path make -j $MAKE_JOB_COUNT && \
+    PATH=$target_arch_path make install -j $MAKE_JOB_COUNT \
     || exit $?
 }

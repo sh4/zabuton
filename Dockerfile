@@ -1,7 +1,7 @@
-FROM ubuntu:18.04
+FROM ubuntu:latest
 
 # Install prerequisute packages
-RUN apt-get update -y && apt-get install -y \
+RUN apt-get -o APT::Sandbox::User=root update -y && apt-get install -y \
     unzip \
     gcc \
     g++ \

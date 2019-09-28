@@ -13,3 +13,6 @@
 [submodule "externals/usb-serial-for-android"]
 	path = externals/usb-serial-for-android
 	url = https://github.com/sh4/usb-serial-for-android.git
+[submodule "externals/vim"]
+	path = externals/vim
+	url = https://github.com/sh4/vim.git

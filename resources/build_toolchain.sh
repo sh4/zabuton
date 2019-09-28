@@ -1,8 +1,9 @@
 #!/bin/bash
 
 export MAKE_JOB_COUNT=`grep processor /proc/cpuinfo | wc -l`
+export MAKEFLAGS="-j $MAKE_JOB_COUNT"
 export SCRIPT_ROOT="$(dirname "${BASH_SOURCE:-$0}")"
-export ANDROID_NDK_HOME=/android-ndk-r19c
+export ANDROID_NDK_HOME=/android-ndk-r20
 export ANDROID_NDK_TOOLCHAIN_ROOT=$ANDROID_NDK_HOME/toolchains/llvm/prebuilt/linux-x86_64
 export ZABUTON_ROOT=$SCRIPT_ROOT/..
 export BUILD_ROOT=$ZABUTON_ROOT/build
@@ -74,6 +75,9 @@ fetch_source ()
     "pigz")
         _fetch_source https://zlib.net/pigz/pigz-2.4.tar.gz
         ;;
+    "ncurses")
+        _fetch_source https://ftp.gnu.org/gnu/ncurses/ncurses-6.1.tar.gz
+        ;;
     *)
         echo "Cannot recognized fetch source name: $1" >&2 && exit 1
     esac
@@ -96,7 +100,20 @@ clean ()
         ;;
     "avrdude")
         cd $BUILD_ROOT/../externals/avrdude
-        git clean -xdf .
+        if [ -f Makefile ]; then
+            make clean
+        else
+            git clean -xdf .
+        fi
+        cd $cwd
+        ;;
+    "vim")
+        cd $BUILD_ROOT/../externals/vim
+        if [ -f Makefile ]; then
+            make clean
+        else
+            git clean -xdf .
+        fi
         cd $cwd
         ;;
     esac
@@ -115,6 +132,8 @@ build ()
     avrdude)
         ;;
     make)
+        ;;
+    vim)
         ;;
     *)
         fetch_source $2

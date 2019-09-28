@@ -1,3 +1,6 @@
+# make
+# make lib NAME=gcc BUILD_AREA=native
+
 BUILD_ROOT := $(dir $(abspath $(lastword $(MAKEFILE_LIST))))
 BUILD_TOOLCHAIN := $(BUILD_ROOT)resources/build_toolchain.sh
 BUILD_COMMAND := @CLEAN=$(CLEAN) $(BUILD_TOOLCHAIN) build
@@ -11,7 +14,12 @@ TARGET_TOOLS := $(TARGET_ROOT)/bin/avr-gcc \
 	$(TARGET_ROOT)/avr/bin/ar \
 	$(TARGET_ROOT)/bin/busybox \
 	$(TARGET_ROOT)/bin/make \
-	$(TARGET_ROOT)/bin/bash
+	$(TARGET_ROOT)/bin/bash \
+	$(TARGET_ROOT)/bin/vim
+TARGET_LIBS := $(ZABUTON_ASSETS_ROOT)/pigz \
+	$(TARGET_LIB_ROOT)/lib/libcurl.a \
+	$(TARGET_LIB_ROOT)/lib/libgit2.a \
+	$(TARGET_LIB_ROOT)/lib/libavrdude.a
 NATIVE_GCC_LIBS := $(NATIVE_ROOT)/lib/libgmp.a \
 	$(NATIVE_ROOT)/lib/libmpfr.a \
 	$(NATIVE_ROOT)/lib/libmpc.a \
@@ -26,7 +34,9 @@ CLEAN := false
 BUILD_AREA := target # or "native"
 NAME :=
 
-all: $(ZABUTON_ASSETS_ROOT)/avr-gcc.tar.gz $(ZABUTON_ASSETS_ROOT)/pigz $(TARGET_LIB_ROOT)/lib/libavrdude.a $(TARGET_LIB_ROOT)/lib/libcurl.a $(TARGET_LIB_ROOT)/lib/libgit2.a
+all: $(ZABUTON_ASSETS_ROOT)/avr-gcc.tar.gz $(TARGET_LIBS)
+all-target-tools: $(TARGET_TOOLS)
+all-target-libs: $(TARGET_LIBS)
 lib:
 	$(BUILD_COMMAND) $(BUILD_AREA) $(NAME)
 
@@ -34,7 +44,7 @@ $(ZABUTON_ASSETS_ROOT)/avr-gcc.tar.gz: $(TARGET_TOOLS)
 	cd $(BULID_ROOT)build/root/target && tar czvf $(ZABUTON_ASSETS_ROOT)/avr-gcc.tar.gz --exclude=share * --hard-dereference
 $(ZABUTON_ASSETS_ROOT)/pigz:
 	$(BUILD_COMMAND) target pigz
-$(NATIVE_ROOT)/bin/avr-gcc: $(NATIVE_GCC_LIBS)
+$(NATIVE_ROOT)/bin/avr-gcc: $(NATIVE_GCC_LIBS) $(NATIVE_ROOT)/avr/bin/ar
 	$(BUILD_COMMAND) native gcc
 $(NATIVE_ROOT)/lib/libgmp.a:
 	$(BUILD_COMMAND) native gmp
@@ -67,6 +77,10 @@ $(TARGET_ROOT)/bin/make: $(wildcard $(BUILD_ROOT)externals/make/src/*.c $(BUILD_
 	$(BUILD_COMMAND) target make
 $(TARGET_ROOT)/bin/bash:
 	$(BUILD_COMMAND) target bash
+$(TARGET_ROOT)/bin/vim: $(TARGET_LIB_ROOT)/lib/libncurses.a
+	$(BUILD_COMMAND) target vim
+$(TARGET_LIB_ROOT)/lib/libncurses.a:
+	$(BUILD_COMMAND) target ncurses
 
 AVRDUDE_DEPS := $(filter-out $(BUILD_ROOT)externals/avrdude/ac_cfg.h, \
 	$(wildcard \

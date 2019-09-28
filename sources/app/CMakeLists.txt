@@ -23,7 +23,8 @@ add_library(
 
         # Provides a relative path to your source file(s).
         src/main/jni/native-lib.cpp
-        src/main/jni/libgit2-wrapper.cpp
+        src/main/jni/LibGit2.cpp
+        src/main/jni/UsbSerialPort.cpp
 )
 
 include_directories(../../externals/avrdude)
@@ -52,6 +53,7 @@ target_link_libraries(
         native-lib
 
         -Wl,--start-group
+
         avrdude
         iconv
         charset
