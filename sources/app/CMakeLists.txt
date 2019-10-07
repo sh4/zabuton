@@ -22,17 +22,18 @@ add_library(
         SHARED
 
         # Provides a relative path to your source file(s).
-        src/main/jni/native-lib.cpp
         src/main/jni/LibGit2.cpp
         src/main/jni/UsbSerialPort.cpp
 )
+
+#         src/main/jni/native-lib.cpp
 
 include_directories(../../externals/avrdude)
 include_directories(../../build/root/target-lib/include)
 
 # Searches for a specified prebuilt library and stores the path as a
 # variable. Because CMake includes system libraries in the search path by
-# default, you only need to specify the name of the public NDK library
+# default, you only need to specify the name of the public NDK laibrary
 # you want to add. CMake verifies that the library exists before
 # completing its build.
 
@@ -54,7 +55,6 @@ target_link_libraries(
 
         -Wl,--start-group
 
-        avrdude
         iconv
         charset
         ssl

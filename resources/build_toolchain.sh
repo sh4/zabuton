@@ -3,10 +3,10 @@
 export MAKE_JOB_COUNT=`grep processor /proc/cpuinfo | wc -l`
 export MAKEFLAGS="-j $MAKE_JOB_COUNT"
 export SCRIPT_ROOT="$(dirname "${BASH_SOURCE:-$0}")"
-export ANDROID_NDK_HOME=/android-ndk-r20
-export ANDROID_NDK_TOOLCHAIN_ROOT=$ANDROID_NDK_HOME/toolchains/llvm/prebuilt/linux-x86_64
-export ZABUTON_ROOT=$SCRIPT_ROOT/..
+export ZABUTON_ROOT="$(realpath $SCRIPT_ROOT/../)"
 export BUILD_ROOT=$ZABUTON_ROOT/build
+export ANDROID_NDK_HOME=$BUILD_ROOT/android-ndk-r20
+export ANDROID_NDK_TOOLCHAIN_ROOT=$ANDROID_NDK_HOME/toolchains/llvm/prebuilt/linux-x86_64
 export TARGET_PREFIX=$BUILD_ROOT/root/target
 export TARGET_LIBRARY_PREFIX=$BUILD_ROOT/root/target-lib
 export TARGET_GCC_LIB_PREFIX=$BUILD_ROOT/root/target-gcc-lib
@@ -72,9 +72,6 @@ fetch_source ()
         [ ! -d $TARGET_LIBRARY_PREFIX/ssl ] && mkdir -p $TARGET_LIBRARY_PREFIX/ssl
         [ -f $cacert ] || curl https://curl.haxx.se/ca/cacert.pem -o $TARGET_LIBRARY_PREFIX/ssl/cacert.pem || exit $?
         ;;
-    "pigz")
-        _fetch_source https://zlib.net/pigz/pigz-2.4.tar.gz
-        ;;
     "ncurses")
         _fetch_source https://ftp.gnu.org/gnu/ncurses/ncurses-6.1.tar.gz
         ;;
@@ -86,7 +83,7 @@ fetch_source ()
 clean ()
 {
 	echo ============================================================
-    echo [CLEAN] $2
+    echo [CLEAN] $2 \($1\)
     echo ============================================================
     local cwd=`pwd`
     local tool_root=$BUILD_ROOT/work/$1/$2
@@ -126,7 +123,7 @@ build ()
         clean $1 $2
     fi
 	echo ============================================================
-    echo [BUILD] $2
+    echo [BUILD] $2 \($1\)
     echo ============================================================
     case "$2" in
     avrdude)

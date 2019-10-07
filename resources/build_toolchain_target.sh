@@ -196,32 +196,15 @@ build_target_avrdude ()
         CC=$target_cc \
         $avrdude_root/configure \
             --host=$target_host \
-            --prefix=$TARGET_LIBRARY_PREFIX \
+            --prefix=$TARGET_PREFIX \
             --disable-shared \
     || exit $?; } && \
     PATH=$target_path make -j $MAKE_JOB_COUNT && \
     PATH=$target_path make -j $MAKE_JOB_COUNT install && \
-    cp -f ./ac_cfg.h $avrdude_root/ && \
-    mkdir -p $zabuton_assets_root && \
-    cp -f $TARGET_LIBRARY_PREFIX/etc/avrdude.conf $zabuton_assets_root/ \
+    rm -f \
+        $TARGET_PREFIX/etc/avrdude.conf.bak \
+        $TARGET_PREFIX/lib/libavrdude.{a,la} \
     || exit $?
-}
-
-build_target_pigz ()
-{
-    local cwd=`pwd`
-    cd $BUILD_PIGZ_ROOT
-    patch -p1 -uN < $SCRIPT_ROOT/0001-pigz-2.4-android.patch
-    PATH=$target_path make clean && \
-    PATH=$target_path make \
-        CC=$target_cc \
-        CFLAGS="$target_cflags -I$ANDROID_NDK_HOME/sysroot/usr/include" \
-        LIBS="-lm -lz" \
-        -j $MAKE_JOB_COUNT && \
-    mkdir -p $zabuton_assets_root && \
-    cp -pf ./pigz $zabuton_assets_root/ && \
-    cd $cwd \
-    || exit $?   
 }
 
 build_target_gmp ()
@@ -405,12 +388,8 @@ build_target_avrlibc ()
     || exit $?
 }
 
-build_target_vim ()
+configure_target_vim ()
 {
-    local cwd=`pwd`
-    local vim_root=$SCRIPT_ROOT/../externals/vim
-
-    cd $vim_root/src
     PATH=$target_path \
     CFLAGS="$target_cflags" \
     LDFLAGS="$LDFLAGS -static -L$TARGET_LIBRARY_PREFIX/lib" \
@@ -429,7 +408,17 @@ build_target_vim ()
         --prefix=$TARGET_PREFIX \
         --host=$target_host \
         --with-tlib=ncurses \
-        --disable-nls && \
+        --disable-nls
+    return $?
+}
+
+build_target_vim ()
+{
+    local cwd=`pwd`
+    local vim_root=$SCRIPT_ROOT/../externals/vim
+
+    cd $vim_root/src
+    configure_target_vim || (make distclean && configure_target_vim || exit $?) && \
     PATH=$target_path make -j $MAKE_JOB_COUNT && \
     PATH=$target_arch_path make install -j $MAKE_JOB_COUNT && \
     rm -f $TARGET_PREFIX/bin/{ex,rview,rvim,view,vimdiff,vimtutor,xxd} \

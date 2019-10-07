@@ -25,12 +25,20 @@ android {
             path "CMakeLists.txt"
         }
     }
-    sourceSets { main { jni.srcDirs = ['src/main/jni', 'src/main/jni/'] } }
+    sourceSets {
+        main {
+            jni.srcDirs = ['src/main/jni', 'src/main/jni/']
+        }
+        androidTest {
+            //assets.srcDirs = ['src/androidTest/assets']
+        }
+    }
     compileOptions {
         sourceCompatibility = '1.8'
         targetCompatibility = '1.8'
     }
 }
+
 
 dependencies {
     implementation fileTree(dir: 'libs', include: ['*.jar'])
