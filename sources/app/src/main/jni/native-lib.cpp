@@ -53,7 +53,7 @@ class UsbSerialPort
 public:
 	UsbSerialPort(JNIEnv* env, jobject port) : env_(env), port_(port)
 	{
-        jclass c = env->FindClass("com/hoho/android/usbserial/driver/UsbSerialPort");
+        jclass c = env->FindClass("com/hoho/android/usbserial/driver/UsbSerialPortServer");
         close_ = env->GetMethodID(c, "close", "()V");
 		read_ = env->GetMethodID(c, "read", "([BI)I");
 		write_ = env->GetMethodID(c, "write", "([BI)I");

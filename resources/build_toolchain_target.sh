@@ -200,10 +200,8 @@ build_target_avrdude ()
             --disable-shared \
     || exit $?; } && \
     PATH=$target_path make -j $MAKE_JOB_COUNT && \
-    PATH=$target_path make -j $MAKE_JOB_COUNT install && \
-    rm -f \
-        $TARGET_PREFIX/etc/avrdude.conf.bak \
-        $TARGET_PREFIX/lib/libavrdude.{a,la} \
+    cp -fp ./avrdude $TARGET_PREFIX/bin && \
+    cp -fp ./avrdude.conf $TARGET_PREFIX/etc \
     || exit $?
 }
 
