@@ -23,12 +23,8 @@ add_library(
 
         # Provides a relative path to your source file(s).
         src/main/jni/LibGit2.cpp
-        src/main/jni/UsbSerialPort.cpp
 )
 
-#         src/main/jni/native-lib.cpp
-
-include_directories(../../externals/avrdude)
 include_directories(../../build/root/target-lib/include)
 
 # Searches for a specified prebuilt library and stores the path as a
