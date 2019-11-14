@@ -16,13 +16,13 @@ TARGET_TOOLS := \
 	$(TARGET_ROOT)/bin/make \
 	$(TARGET_ROOT)/bin/bash \
 	$(TARGET_ROOT)/bin/vim \
-	$(TARGET_ROOT)/bin/avrdude
+	$(TARGET_ROOT)/bin/avrdude \
+	$(TARGET_ROOT)/bin/busybox
 TARGET_LIBS := \
 	$(TARGET_LIB_ROOT)/lib/libcurl.a \
 	$(TARGET_LIB_ROOT)/lib/libgit2.a
 ZABUTON_ASSETS := \
-	$(ZABUTON_ASSETS_ROOT)/busybox \
-	$(ZABUTON_ASSETS_ROOT)/avr-gcc.tar.gz
+	$(ZABUTON_ASSETS_ROOT)/toolchain.zip
 NATIVE_GCC_LIBS := \
 	$(NATIVE_ROOT)/lib/libgmp.a \
 	$(NATIVE_ROOT)/lib/libmpfr.a \
@@ -50,21 +50,21 @@ gcc: $(TARGET_ROOT)/bin/avr-gcc
 make: $(TARGET_ROOT)/bin/make
 bash: $(TARGET_ROOT)/bin/bash
 vim: $(TARGET_ROOT)/bin/vim
+busybox: $(TARGET_ROOT)/bin/busybox
 avrdude: $(TARGET_ROOT)/bin/avrdude
 libgit2: $(TARGET_LIB_ROOT)/lib/libgit2.a
-busybox: $(ZABUTON_ASSETS_ROOT)/busybox
 
-$(ZABUTON_ASSETS_ROOT)/avr-gcc.tar.gz: $(TARGET_TOOLS)
+$(ZABUTON_ASSETS_ROOT)/toolchain.zip: $(TARGET_TOOLS)
 	cd $(TARGET_ROOT) && \
-	tar czvf $(ZABUTON_ASSETS_ROOT)/avr-gcc.tar.gz \
-		--exclude=share/doc \
-		--exclude=share/info \
-		--exclude=share/man \
-		--exclude=share/vim/vim81/doc \
-		--exclude=share/vim/vim81/tutor \
-		* \
-		--hard-dereference
-$(ZABUTON_ASSETS_ROOT)/busybox: $(NDK_BUILD)
+	zip -1 -r $(ZABUTON_ASSETS_ROOT)/toolchain.zip \
+		--exclude='avr/bin/*' \
+		--exclude='share/doc/*' \
+		--exclude='share/info/*' \
+		--exclude='share/man/*' \
+		--exclude='share/vim/vim81/doc/*' \
+		--exclude='share/vim/vim81/tutor/*' \
+		*
+$(TARGET_ROOT)/bin/busybox: $(NDK_BUILD)
 	$(BUILD_COMMAND) target busybox
 
 $(NATIVE_ROOT)/bin/avr-gcc: $(NATIVE_GCC_LIBS) $(NATIVE_ROOT)/avr/bin/ar

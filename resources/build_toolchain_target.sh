@@ -24,8 +24,8 @@ build_target_busybox ()
     CFLAGS="$target_cflags -I$ANDROID_NDK_HOME/sysroot/usr/include/aarch64-linux-android -I$ANDROID_NDK_HOME/sysroot/usr/include" \
     CXXFLAGS="$target_cxxflags" \
     make ARCH=aarch64 CROSS_COMPILE="$cross_compile_prefix-" -j $MAKE_JOB_COUNT && \
-    cp -f ./busybox $zabuton_assets_root/ && \
-    $target_strip $zabuton_assets_root/busybox && \
+    cp -f ./busybox $TARGET_PREFIX/bin/busybox && \
+    $target_strip $TARGET_PREFIX/bin//busybox && \
     cd $cwd \
     || exit $?
 }

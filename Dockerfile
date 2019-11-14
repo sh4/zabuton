@@ -3,6 +3,7 @@ FROM ubuntu:latest
 # Install prerequisute packages
 RUN apt-get update -y && apt-get install -y \
     unzip \
+    zip \
     gcc \
     g++ \
     autoconf \
