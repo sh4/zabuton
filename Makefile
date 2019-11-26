@@ -56,13 +56,15 @@ libgit2: $(TARGET_LIB_ROOT)/lib/libgit2.a
 
 $(ZABUTON_ASSETS_ROOT)/toolchain.zip: $(TARGET_TOOLS)
 	cd $(TARGET_ROOT) && \
-	zip -1 -r $(ZABUTON_ASSETS_ROOT)/toolchain.zip \
+	rm -f $(ZABUTON_ASSETS_ROOT)/toolchain.zip ; \
+	zip -4 -r $(ZABUTON_ASSETS_ROOT)/toolchain.zip \
 		--exclude='avr/bin/*' \
 		--exclude='share/doc/*' \
 		--exclude='share/info/*' \
 		--exclude='share/man/*' \
 		--exclude='share/vim/vim81/doc/*' \
 		--exclude='share/vim/vim81/tutor/*' \
+		--exclude='share/vim/vim81/spell/*' \
 		*
 $(TARGET_ROOT)/bin/busybox: $(NDK_BUILD)
 	$(BUILD_COMMAND) target busybox

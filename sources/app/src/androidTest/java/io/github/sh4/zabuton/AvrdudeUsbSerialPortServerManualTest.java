@@ -36,15 +36,14 @@ import java.util.concurrent.Semaphore;
 import io.github.sh4.zabuton.util.UsbSerialPortServer;
 
 import static androidx.test.platform.app.InstrumentationRegistry.getInstrumentation;
-import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertFalse;
 import static org.junit.Assert.assertNotNull;
 import static org.junit.Assert.assertTrue;
 
 @RunWith(AndroidJUnit4.class)
-public class AvrdudeUsbSerialPortServerMaualTest {
-    private final static String TAG = AvrdudeUsbSerialPortServerMaualTest.class.getSimpleName();
-    private final static String ACTION = AvrdudeUsbSerialPortServerMaualTest.class.getName() + ".USB_PERMISSION";
+public class AvrdudeUsbSerialPortServerManualTest {
+    private final static String TAG = AvrdudeUsbSerialPortServerManualTest.class.getSimpleName();
+    private final static String ACTION = AvrdudeUsbSerialPortServerManualTest.class.getName() + ".USB_PERMISSION";
 
     @Test
     public void testReadHexFile() throws Exception {
