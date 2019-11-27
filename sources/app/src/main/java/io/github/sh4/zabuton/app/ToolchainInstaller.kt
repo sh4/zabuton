@@ -2,7 +2,11 @@ package io.github.sh4.zabuton.app
 
 import android.content.Context
 import android.system.Os
+import com.squareup.moshi.JsonClass
+import com.squareup.moshi.JsonReader
+import com.squareup.moshi.Moshi
 import kotlinx.coroutines.*
+import okio.Okio
 import java.io.File
 import java.io.FileOutputStream
 import java.io.InputStreamReader
@@ -12,6 +16,7 @@ import java.util.zip.ZipInputStream
 private const val INSTALL_PATH_PREFIX = "root"
 private const val INSTALL_PATH_PREFIX_TMP = "root.tmp"
 private const val INSTALL_TOOLCHAIN = "build/toolchain.zip"
+private const val INSTALL_SYMLINK_MAPS = "build/symlinkMaps.json"
 private val INSTALL_EXECUTABLE_DIRS = arrayOf("avr", "bin", "libexec")
 
 private const val MODE_OWNER_EXECUTE = 64
@@ -19,7 +24,12 @@ private const val MODE_OWNER_WRITE = 128
 private const val MODE_OWNER_READ = 256
 private const val MODE_OWNER_RWX = MODE_OWNER_EXECUTE + MODE_OWNER_WRITE + MODE_OWNER_READ
 
-class InstallProgress()
+@JsonClass(generateAdapter = true)
+data class SymlinkMapEntry(val target: String, val src: String)
+@JsonClass(generateAdapter = true)
+data class SymlinkMaps(val files: List<SymlinkMapEntry>)
+
+class InstallProgress
 {
     private val currentAtomic = AtomicLong()
 
@@ -84,33 +94,15 @@ class ToolchainInstaller(private val installProgress: InstallProgress) {
         joinAll(*expandJobs)
         installProgress.finish()
 
-        // set executable bits
-        for (file in INSTALL_EXECUTABLE_DIRS.map { File(targetPrefix, it) }) {
-            file.walk().filter { it.isFile }.forEach {
-                Os.chmod(it.absolutePath, MODE_OWNER_RWX)
-            }
-        }
-
-        // create symlinks
-        val crateBusyBoxSymlinkJob = launch (Dispatchers.IO) {
-            val busyboxFile = File(targetPrefix, "bin/busybox")
-            ProcessBuilder(mutableListOf(busyboxFile.absolutePath, "--list")).start().let {
-                InputStreamReader(it.inputStream).useLines { lines ->
-                    val busyboxPath = busyboxFile.absolutePath
-                    for (line in lines) {
-                        Os.symlink(busyboxPath, File(targetPrefix, "bin/${line}").absolutePath)
-                    }
-                }
-            }
-        }
-        val createSpecificSymlinkJob = launch (Dispatchers.IO) {
-        }
-
-        joinAll(crateBusyBoxSymlinkJob, createSpecificSymlinkJob)
-
-        // delete previous toolchain tree
         val toolchainRoot = File(context.filesDir, INSTALL_PATH_PREFIX)
+        replaceToolchainRoot(context, toolchainRoot, targetPrefix)
+        installPostProcess(toolchainRoot, context)
+        progressJob.join()
+    }
+
+    private fun replaceToolchainRoot(context: Context, toolchainRoot: File, targetPrefix: File) {
         val toolchainInstalled = toolchainRoot.exists()
+        // delete previous toolchain tree
         val previousToolchainRoot = File(context.filesDir, INSTALL_PATH_PREFIX + ".old") // TODO: uniqueness
         if (toolchainInstalled) {
             toolchainRoot.renameTo(previousToolchainRoot)
@@ -119,8 +111,41 @@ class ToolchainInstaller(private val installProgress: InstallProgress) {
         if (toolchainInstalled) {
             previousToolchainRoot.deleteRecursively()
         }
+    }
 
-        progressJob.join()
+    private suspend fun installPostProcess(toolchainRoot: File, context: Context) = coroutineScope {
+        // set executable bits
+        for (file in INSTALL_EXECUTABLE_DIRS.map { File(toolchainRoot, it) }) {
+            file.walk().filter { it.isFile }.forEach {
+                Os.chmod(it.absolutePath, MODE_OWNER_RWX)
+            }
+        }
+        // create symlinks
+        val crateBusyBoxSymlinkJob = launch(Dispatchers.IO) {
+            val busyboxFile = File(toolchainRoot, "bin/busybox")
+            ProcessBuilder(mutableListOf(busyboxFile.absolutePath, "--list")).start().let {
+                InputStreamReader(it.inputStream).useLines { lines ->
+                    val busyboxPath = busyboxFile.absolutePath
+                    for (line in lines) {
+                        Os.symlink(busyboxPath, File(toolchainRoot, "bin/${line}").absolutePath)
+                    }
+                }
+            }
+        }
+        val createSpecificSymlinkJob = launch(Dispatchers.IO) {
+            val moshi = Moshi.Builder().build()
+            Okio.buffer(Okio.source(context.assets.open(INSTALL_SYMLINK_MAPS))).use {
+                val symlinkMaps = moshi.adapter(SymlinkMaps::class.java).fromJson(JsonReader.of(it))
+                for (file in symlinkMaps?.files.orEmpty()) {
+                    val source = File(toolchainRoot, file.src)
+                    val target = File(toolchainRoot, file.target)
+                    val targetDir = target.parentFile
+                    if (!targetDir.exists()) targetDir.mkdir()
+                    Os.symlink(source.absolutePath, target.absolutePath)
+                }
+            }
+        }
+        joinAll(crateBusyBoxSymlinkJob, createSpecificSymlinkJob)
     }
 
     private suspend fun extractZipArchive(zipInput: ZipInputStream, targetPrefix: File, processEntryCount: Int) {

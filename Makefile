@@ -22,7 +22,8 @@ TARGET_LIBS := \
 	$(TARGET_LIB_ROOT)/lib/libcurl.a \
 	$(TARGET_LIB_ROOT)/lib/libgit2.a
 ZABUTON_ASSETS := \
-	$(ZABUTON_ASSETS_ROOT)/toolchain.zip
+	$(ZABUTON_ASSETS_ROOT)/toolchain.zip \
+	$(ZABUTON_ASSETS_ROOT)/symlinkMaps.json
 NATIVE_GCC_LIBS := \
 	$(NATIVE_ROOT)/lib/libgmp.a \
 	$(NATIVE_ROOT)/lib/libmpfr.a \
@@ -66,6 +67,9 @@ $(ZABUTON_ASSETS_ROOT)/toolchain.zip: $(TARGET_TOOLS)
 		--exclude='share/vim/vim81/tutor/*' \
 		--exclude='share/vim/vim81/spell/*' \
 		*
+$(ZABUTON_ASSETS_ROOT)/symlinkMaps.json:
+	cp -f $(ZABUTON_ROOT)resources/symlinkMaps.json $@
+
 $(TARGET_ROOT)/bin/busybox: $(NDK_BUILD)
 	$(BUILD_COMMAND) target busybox
 

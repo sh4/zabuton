@@ -1,0 +1,13 @@
+{
+    "files": [
+         {"target": "avr/bin/ar", "src": "bin/avr-ar"}
+        ,{"target": "avr/bin/as", "src": "bin/avr-as"}
+        ,{"target": "avr/bin/ld", "src": "bin/avr-ld"}
+        ,{"target": "avr/bin/ld.bfd", "src": "bin/avr-ld"}
+        ,{"target": "avr/bin/nm", "src": "bin/avr-nm"}
+        ,{"target": "avr/bin/objcopy", "src": "bin/avr-objcopy"}
+        ,{"target": "avr/bin/ranlib", "src": "bin/avr-ranlib"}
+        ,{"target": "avr/bin/readelf", "src": "bin/avr-readelf"}
+        ,{"target": "avr/bin/strip", "src": "bin/avr-strip"}
+    ]
+}
