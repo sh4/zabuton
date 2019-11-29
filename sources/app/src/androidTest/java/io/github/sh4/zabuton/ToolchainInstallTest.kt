@@ -13,10 +13,10 @@ import org.junit.Test
 import org.junit.runner.RunWith
 import kotlin.system.measureTimeMillis
 
-private val TAG = ToolchainInstallationTest::class.java.simpleName
+private val TAG = ToolchainInstallTest::class.java.simpleName
 
 @RunWith(AndroidJUnit4::class)
-class ToolchainInstallationTest {
+class ToolchainInstallTest {
     @Test
     fun testCleanInstall() {
         val context = getInstrumentation().targetContext

@@ -1,4 +1,4 @@
-package io.github.sh4.zabuton.util;
+package io.github.sh4.zabuton.programmer;
 
 import android.util.Log;
 
@@ -10,10 +10,10 @@ import java.io.IOException;
 import java.io.InputStream;
 import java.io.OutputStream;
 import java.nio.charset.StandardCharsets;
-import java.util.Arrays;
+import java.util.concurrent.atomic.AtomicInteger;
 
-public class UsbSerialPortServer {
-    private static final String TAG = UsbSerialPortServer.class.getSimpleName();
+public class FirmwareProgrammerServer {
+    private static final String TAG = FirmwareProgrammerServer.class.getSimpleName();
     private static final int MAX_BUFFER_SIZE = 1024 * 128;
     private static final int DEFAULT_TIMEOUT_MILLISECONDS = 1000 * 5;
 
@@ -39,19 +39,33 @@ public class UsbSerialPortServer {
         static final int SET_DTR = 11;
         static final int SET_RTS = 12;
         static final int GET_LAST_ERROR = 13;
+        static final int SET_PROGRESS = 14;
     }
 
     private final UsbSerialPort usbSerialPort;
     private final DataInputStream inputStream;
     private final DataOutputStream outputStream;
+    private final AtomicInteger percentProgress;
+    private final AtomicInteger elapsedTimeMilliseconds;
     private Throwable lastException;
     private Thread serverThread;
     private boolean serverClosed;
 
-    private UsbSerialPortServer(UsbSerialPort usbSerialPort, InputStream input, OutputStream output) {
+
+    private FirmwareProgrammerServer(UsbSerialPort usbSerialPort, InputStream input, OutputStream output) {
         this.usbSerialPort = usbSerialPort;
         this.inputStream = new DataInputStream(input);
         this.outputStream = new DataOutputStream(output);
+        this.percentProgress = new AtomicInteger();
+        this.elapsedTimeMilliseconds = new AtomicInteger();
+    }
+
+    public int getPercentProgress() {
+        return percentProgress.get();
+    }
+
+    public int getElapsedTimeMilliseconds() {
+        return elapsedTimeMilliseconds.get();
     }
 
     public boolean isRunning() {
@@ -74,6 +88,8 @@ public class UsbSerialPortServer {
         serverThread = new Thread(() ->
         {
             try {
+                percentProgress.set(0);
+                elapsedTimeMilliseconds.set(0);
                 while (!serverClosed) {
                     if (!executeCommand(inputStream, outputStream)) {
                         break;
@@ -153,11 +169,30 @@ public class UsbSerialPortServer {
             case Command.GET_LAST_ERROR:
                 commandGetLastError(inputStream, outputStream);
                 break;
+            // SET_PROGRESS C:[Command 13(1byte)][progressPercent (1byte)][elapsedTimeMilliseconds (4byte)]
+            // S:[Response 0 or Error.GENERIC_ERROR (4byte)]
+            case Command.SET_PROGRESS:
+                commandSetProgress(inputStream, outputStream);
+                break;
             default:
                 break;
         }
         return true;
     }
+
+    private void commandSetProgress(DataInputStream inputStream, DataOutputStream outputStream) throws IOException {
+        try {
+            int progress = inputStream.readByte(); // 0-100
+            int elapsed = inputStream.readInt();
+            Log.d(TAG, "commandSetProgress: percentProgress=" + progress + ", elapsed=" + elapsed + "ms");
+            percentProgress.set(progress);
+            elapsedTimeMilliseconds.set(elapsed);
+            outputStream.writeInt(0);
+        } catch (IOException e) {
+            setLastException(outputStream, e);
+        }
+    }
+
 
     private void commandGetLastError(DataInputStream inputStream, DataOutputStream outputStream) throws IOException {
         Log.d(TAG, "commandGetLastError");
@@ -324,8 +359,8 @@ public class UsbSerialPortServer {
         outputStream.writeInt(Error.GENERIC_ERROR);
     }
 
-    public static UsbSerialPortServer startServer(UsbSerialPort openedUsbSerialPort, InputStream input, OutputStream output) throws IOException {
-        UsbSerialPortServer server = new UsbSerialPortServer(openedUsbSerialPort, input, output);
+    public static FirmwareProgrammerServer startServer(UsbSerialPort openedUsbSerialPort, InputStream input, OutputStream output) throws IOException {
+        FirmwareProgrammerServer server = new FirmwareProgrammerServer(openedUsbSerialPort, input, output);
         server.start();
         Log.d(TAG, "server started.");
         return server;
