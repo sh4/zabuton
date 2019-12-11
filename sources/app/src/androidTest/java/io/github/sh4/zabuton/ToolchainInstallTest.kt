@@ -3,9 +3,10 @@ package io.github.sh4.zabuton
 import android.util.Log
 import androidx.test.ext.junit.runners.AndroidJUnit4
 import androidx.test.platform.app.InstrumentationRegistry.getInstrumentation
-import io.github.sh4.zabuton.app.InstallProgress
-import io.github.sh4.zabuton.app.ToolchainInstaller
+import io.github.sh4.zabuton.app.toolchainInstall
 import io.github.sh4.zabuton.app.toolchainRoot
+import io.github.sh4.zabuton.util.Progress
+import io.github.sh4.zabuton.util.ProgressContext
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.runBlocking
 import org.junit.Assert
@@ -27,11 +28,11 @@ class ToolchainInstallTest {
         }
         val elapsed = measureTimeMillis {
             runBlocking {
-                val progress = InstallProgress()
-                ToolchainInstaller(progress).install(context) {
-                    while (!progress.finished) {
-                        Log.d(TAG, "progress: [${Thread.currentThread().name}] ${progress.current} / ${progress.total} [bytes]")
-                        delay(1500)
+                toolchainInstall(context) { channel ->
+                    val p = channel.receive()
+                    while (!p.finished) {
+                        Log.d(TAG, "progress: [${Thread.currentThread().name}] ${p.current} / ${p.total} [bytes]")
+                        delay(1000)
                     }
                 }
             }

@@ -2,17 +2,22 @@ package io.github.sh4.zabuton.workspace
 
 import java.util.*
 
+
 data class WorkspaceName(val name: String) {
     override fun toString() = name
 }
 data class WorkspaceId(val id: UUID) {
     override fun toString() = id.toString()
 }
-data class Workspace(val id: WorkspaceId, val name: WorkspaceName, val deleted: Boolean = false)
+data class Workspace(val id: WorkspaceId,
+                     val name: WorkspaceName,
+                     val comment: String = "",
+                     val deleted: Boolean = false)
 
 data class WorkspaceFindRequest(val id: WorkspaceId? = null,
                                 val name: WorkspaceName? = null,
-                                val deleted: Boolean? = null)
+                                val deleted: Boolean? = null,
+                                val comment: String? = null)
 
 interface WorkspaceRepository {
     fun find(id: WorkspaceId): Workspace?
@@ -59,6 +64,9 @@ class OnMemoryWorkspaceRepository : WorkspaceRepository {
                 return@filter false
             }
             if (request.deleted != null && request.deleted != it.value.deleted) {
+                return@filter false
+            }
+            if (request.comment != null && !it.value.comment.contains(request.comment)) {
                 return@filter false
             }
             return@filter true
