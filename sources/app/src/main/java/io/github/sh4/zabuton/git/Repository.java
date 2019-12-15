@@ -1,6 +1,7 @@
 package io.github.sh4.zabuton.git;
 
 import java.util.function.Consumer;
+import java.util.function.Function;
 
 public class Repository {
     private final long repositoryHandle;
@@ -11,8 +12,7 @@ public class Repository {
 
     public static native Repository open(String repoPath);
 
-    // C:\Home\zabuton\sources\app\src\main\assets\build>git clone --bare https://github.com/qmk/qmk_firmware.git
-    // Cloning into bare repository 'qmk_firmware.git'...
+    // Cloning into bare repository 'repository.git'...
     // remote: Enumerating objects: 2, done.
     // remote: Counting objects: 100% (2/2), done.
     // remote: Compressing objects: 100% (2/2), done.
@@ -28,6 +28,9 @@ public class Repository {
     public native String getHeadName();
     public native String[] getRemoteBranchNames();
     public native String[] getLocalBranchNames();
+    public native String[] getTagNames();
+
+    public native void log(Function<ICommitObject, Boolean> callback);
 
     @Override
     protected void finalize() throws Throwable {

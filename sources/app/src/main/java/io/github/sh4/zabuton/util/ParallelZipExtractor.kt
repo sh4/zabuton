@@ -9,8 +9,8 @@ import java.util.zip.ZipInputStream
 suspend fun extractZipAsParallel(
         input: () -> InputStream,
         extractDir: File,
-        block: suspend CoroutineScope.(channel: ReceiveChannel<Progress>) -> Unit,
-        defaultProgressContext: ProgressContext? = null,
+        block: suspend CoroutineScope.(channel: ReceiveChannel<Progress<Unit>>) -> Unit,
+        defaultProgressContext: ProgressContext<Unit>? = null,
         parallelLevel:Int = Runtime.getRuntime().availableProcessors() - 1
 ) = coroutineScope {
     // calculate total write size
@@ -57,12 +57,19 @@ private fun extractZipArchive(
         zipInput: ZipInputStream,
         extractDir: File,
         processEntryCount: Int,
-        progress: Progress
+        progress: Progress<Unit>
 ) {
     repeat(processEntryCount) {
         val entry = zipInput.nextEntry ?: return
         if (entry.isDirectory) return@repeat
-        val writeBytes = File(extractDir, entry.name).outputStream().use { zipInput.copyTo(it) }
-        progress.report(writeBytes)
+        File(extractDir, entry.name).outputStream().use { out ->
+            val buffer = ByteArray(DEFAULT_BUFFER_SIZE)
+            var bytes = zipInput.read(buffer)
+            while (bytes >= 0) {
+                out.write(buffer, 0, bytes)
+                progress.reportAdvance(bytes.toLong())
+                bytes = zipInput.read(buffer)
+            }
+        }
     }
 }

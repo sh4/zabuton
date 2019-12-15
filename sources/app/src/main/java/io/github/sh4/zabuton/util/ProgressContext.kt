@@ -7,15 +7,27 @@ import kotlinx.coroutines.launch
 import kotlinx.coroutines.sync.Mutex
 import kotlinx.coroutines.sync.withLock
 
-class ProgressContext(scope: CoroutineScope, val progressBlock: suspend CoroutineScope.(channel: ReceiveChannel<Progress>) -> Unit) {
-    private val progressSequence = Channel<Progress>()
+enum class ProgressType {
+    ExtractZip,
+    DownloadFile,
+    CloneGitRepository,
+    FetchGitRepository,
+    CheckoutGitRepository,
+    ResetGitRepository,
+}
+
+class ProgressContext<T>(
+        scope: CoroutineScope,
+        progressBlock: suspend CoroutineScope.(channel: ReceiveChannel<Progress<T>>) -> Unit)
+{
+    private val progressSequence = Channel<Progress<T>>(Channel.UNLIMITED)
 
     init {
         scope.launch { progressBlock(this, progressSequence) }
     }
 
-    suspend fun next(type: ProgressType, total: Long): Progress {
-        val p = Progress(type, total)
+    suspend fun next(type: ProgressType, total: Long): Progress<T> {
+        val p = Progress<T>(type, total)
         progressSequence.send(p)
         return p
     }

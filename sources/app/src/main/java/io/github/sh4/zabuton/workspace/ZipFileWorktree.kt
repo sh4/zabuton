@@ -15,7 +15,7 @@ suspend fun createZipFileWorktree(
         root: File,
         cacheRoot: File,
         url: URL,
-        block: suspend CoroutineScope.(channel: ReceiveChannel<Progress>) -> Unit
+        block: suspend CoroutineScope.(channel: ReceiveChannel<Progress<Unit>>) -> Unit
 ): ZipFileWorktree {
     val canonicalRoot = File(root.canonicalPath, workspace.id.toString())
     when (url.protocol?.toLowerCase(Locale.ENGLISH)) {
@@ -29,21 +29,21 @@ suspend fun createZipFileWorktree(
 
 private suspend fun expandZipFile(
         canonicalRoot: File, zipFile: File,
-        block: suspend CoroutineScope.(channel: ReceiveChannel<Progress>) -> Unit,
-        defaultProgessContext: ProgressContext? = null
+        block: suspend CoroutineScope.(channel: ReceiveChannel<Progress<Unit>>) -> Unit,
+        defaultProgressContext: ProgressContext<Unit>? = null
 ) {
     canonicalRoot.mkdirs()
     extractZipAsParallel({ zipFile.inputStream() }, canonicalRoot,
             block = block,
-            defaultProgressContext = defaultProgessContext)
+            defaultProgressContext = defaultProgressContext)
 }
 
 private suspend fun downloadZipFile(
         canonicalRoot: File,
         cacheRoot: File,
         url: URL,
-        block: suspend CoroutineScope.(channel: ReceiveChannel<Progress>) -> Unit,
-        defaultProgressContext: ProgressContext? = null
+        block: suspend CoroutineScope.(channel: ReceiveChannel<Progress<Unit>>) -> Unit,
+        defaultProgressContext: ProgressContext<Unit>? = null
 ) = coroutineScope {
     val client = OkHttpClient()
     val request = Request.Builder().url(url).build()
@@ -54,7 +54,7 @@ private suspend fun downloadZipFile(
         val zipFile = File.createTempFile(ZipFileWorktree::class.java.simpleName,".zip", cacheRoot)
         val responseBody = response.await().body()
         val downloadProgress = progressContext.next(
-                type = ProgressType.Download,
+                type = ProgressType.DownloadFile,
                 total = responseBody?.contentLength()?.coerceAtLeast(PROGRESS_NOT_SPECIFIED) ?: PROGRESS_NOT_SPECIFIED)
         val inputStream = responseBody?.byteStream() ?: EmptyInputStream()
         zipFile.outputStream().use { outputStream ->
@@ -62,16 +62,15 @@ private suspend fun downloadZipFile(
             var bytes = inputStream.read(buffer)
             while (bytes >= 0) {
                 outputStream.write(buffer, 0, bytes)
-                downloadProgress.report(bytes.toLong())
+                downloadProgress.reportAdvance(bytes.toLong())
                 bytes = inputStream.read(buffer)
             }
         }
         downloadProgress.finish()
         return@async zipFile
     }.await()
-    expandZipFile(canonicalRoot, zipFile, block = block, defaultProgessContext = progressContext)
-    if (defaultProgressContext == null)
-    {
+    expandZipFile(canonicalRoot, zipFile, block = block, defaultProgressContext = progressContext)
+    if (defaultProgressContext == null) {
         progressContext.finish()
     }
 }

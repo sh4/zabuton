@@ -4,16 +4,13 @@ import android.content.Context
 import androidx.test.ext.junit.runners.AndroidJUnit4
 import androidx.test.platform.app.InstrumentationRegistry
 import io.github.sh4.zabuton.git.*
-import io.github.sh4.zabuton.util.ContextUtil
+import io.github.sh4.zabuton.workspace.initializeLibGit2
 import org.apache.commons.io.FileUtils
 import org.junit.Assert
 import org.junit.Test
 import org.junit.runner.RunWith
 import java.io.File
 import java.io.IOException
-import java.nio.file.Files
-import java.nio.file.Path
-import java.util.*
 
 @RunWith(AndroidJUnit4::class)
 class LibGit2Test {
@@ -31,7 +28,7 @@ class LibGit2Test {
         val context = InstrumentationRegistry.getInstrumentation().targetContext
         val reposPath = context.getDir("test-repos", Context.MODE_PRIVATE)
         reposPath.deleteRecursively()
-        initLibGit2(context)
+        initializeLibGit2(context)
         val p = arrayOf<ICloneProgress?>(null)
         Assert.assertNotNull(Repository.clone(CLONE_URL, reposPath.absolutePath) { cur: ICloneProgress? -> p[0] = cur })
         Assert.assertNotEquals(0, p[0]!!.completedSteps)
@@ -50,7 +47,7 @@ class LibGit2Test {
     @Test
     fun fetchRemote() {
         val context = InstrumentationRegistry.getInstrumentation().targetContext
-        initLibGit2(context)
+        initializeLibGit2(context)
         val reposPath = context.getDir("test-repos", Context.MODE_PRIVATE)
         val repos = ensureRepositoryOpened(reposPath)
         Assert.assertNotNull(repos)
@@ -72,7 +69,7 @@ class LibGit2Test {
     @Throws(IOException::class)
     fun checkoutBranch() {
         val context = InstrumentationRegistry.getInstrumentation().targetContext
-        initLibGit2(context)
+        initializeLibGit2(context)
         val reposPath = context.getDir("test-repos", Context.MODE_PRIVATE)
         reposPath.deleteRecursively()
         val repos = Repository.clone(CLONE_URL, reposPath.absolutePath) { cur: ICloneProgress? -> }
@@ -89,7 +86,7 @@ class LibGit2Test {
     @Throws(IOException::class)
     fun reset() {
         val context = InstrumentationRegistry.getInstrumentation().targetContext
-        initLibGit2(context)
+        initializeLibGit2(context)
         val reposPath = context.getDir("test-repos", Context.MODE_PRIVATE)
         val testFile = File(reposPath, "Test/Files.txt")
         FileUtils.writeStringToFile(testFile, "Foobar2000", "utf-8")
@@ -103,7 +100,7 @@ class LibGit2Test {
     @Throws(IOException::class)
     fun branchOperations() {
         val context = InstrumentationRegistry.getInstrumentation().targetContext
-        initLibGit2(context)
+        initializeLibGit2(context)
         val reposPath = context.getDir("test-repos", Context.MODE_PRIVATE)
         reposPath.deleteRecursively()
         val repos = ensureRepositoryOpened(reposPath)
@@ -126,9 +123,14 @@ class LibGit2Test {
         }
     }
 
-    private fun initLibGit2(context: Context) {
-        val sslCertificatesFile = ContextUtil.writeToFilesDir(context, "build/cacert.pem")
-        Assert.assertNotNull(sslCertificatesFile)
-        LibGit2.init(sslCertificatesFile.absolutePath)
+    @Test
+    fun tags() {
+        val context = InstrumentationRegistry.getInstrumentation().targetContext
+        initializeLibGit2(context)
+        val reposPath = context.getDir("test-repos", Context.MODE_PRIVATE)
+        reposPath.deleteRecursively()
+        val repos = ensureRepositoryOpened(reposPath)
+        val tags = repos.tagNames
+        Assert.assertTrue(tags.isNotEmpty())
     }
 }

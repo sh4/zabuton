@@ -19,9 +19,9 @@ class ZipFileWorktreeUnitTest {
     @Test
     fun simpleTest () {
         val workspace = Workspace(WorkspaceId(UUID.randomUUID()), WorkspaceName("test"))
-        runBlocking {
+        val worktree = runBlocking {
             var progressCount = 0
-            createZipFileWorktree(
+            return@runBlocking createZipFileWorktree(
                     workspace,
                     tempFolder.root,
                     tempFolder.newFolder("cache"),
@@ -43,5 +43,13 @@ class ZipFileWorktreeUnitTest {
                 Assert.assertEquals(2, progressCount)
             }
         }
+
+        Assert.assertEquals(workspace, worktree.workspace)
+        Assert.assertTrue(worktree.root.exists())
+        Assert.assertTrue(worktree.root.listFiles().isNotEmpty())
+
+        worktree.deletePermanently()
+
+        Assert.assertFalse(worktree.root.exists())
     }
 }

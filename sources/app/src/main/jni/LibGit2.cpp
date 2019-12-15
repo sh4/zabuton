@@ -297,6 +297,50 @@ jobjectArray GetBranchReferenceNameArray(JNIEnv* env, git_repository* repo, git_
     return refArray;
 }
 
+jobjectArray GetTagReferenceNameArray(JNIEnv* env, git_repository* repo)
+{
+    std::vector<std::string> tags;
+
+    ZABUTON_ENSURE_LIBGIT2_NOERROR_WITH_RETURN(
+            env,
+            git_tag_foreach(repo, [](const char *name, git_oid *oid, void *payload) {
+                auto t = reinterpret_cast<decltype(tags)*>(payload);
+                assert(t != nullptr);
+                t->push_back(std::string(name));
+                return 0;
+            }, &tags),
+            nullptr);
+
+    jobjectArray tagArray =
+            env->NewObjectArray(static_cast<jsize>(tags.size()), env->FindClass("java/lang/String"), nullptr);
+    int i = 0;
+    for (auto& name : tags) {
+        jstring refNameObject = env->NewStringUTF(name.c_str());
+        env->SetObjectArrayElement(tagArray, i++, refNameObject);
+    }
+    return tagArray;
+}
+
+jobject GetCommitObject(JNIEnv *env, git_commit* commit) {
+    jclass commitObjectClass = env->FindClass("io/github/sh4/zabuton/git/CommitObject");
+    jclass userClass = env->FindClass("io/github/sh4/zabuton/git/User");
+
+    jmethodID commitObjectCtor = env->GetMethodID(commitObjectClass, "<init>",
+            "(Ljava/util/List;Lio/github/sh4/zabuton/git/User;Lio/github/sh4/zabuton/git/User;Ljava/util/Date;Ljava/lang/String;)V");
+    jmethodID userCtor = env->GetMethodID(userClass, "<init>",
+            "(Ljava/lang/String;Ljava/lang/String;)V");
+
+    unsigned int parents = git_commit_parentcount(commit);
+
+    if (parents > 0) {
+    }
+
+
+    env->NewObject(commitObjectClass, commitObjectCtor, nullptr);
+
+    return nullptr;
+}
+
 } // anonymous namespace
 
 extern "C"
@@ -343,7 +387,9 @@ Java_io_github_sh4_zabuton_git_Repository_clone(JNIEnv *env, jclass type, jstrin
     opts.fetch_opts.callbacks.sideband_progress = [](const char *str, int len, void *payload) -> int {
         auto p = reinterpret_cast<CloneProgressReporter*>(payload);
         assert(p != nullptr);
-        p->GetFetchProgress()->SetSideBandMessage(std::string(str, static_cast<size_t>(len)));
+        if (len > 0) {
+            p->GetFetchProgress()->SetSideBandMessage(std::string(str, static_cast<size_t>(len)));
+        }
         return 0;
     };
     opts.fetch_opts.callbacks.payload = ctx.get();
@@ -384,44 +430,60 @@ Java_io_github_sh4_zabuton_git_Repository_checkout(JNIEnv *env, jobject this_, j
     opts.progress_cb = CheckoutProgressHandler<CheckoutProgressReporter>;
     opts.progress_payload = ctx.get();
     opts.disable_filters = 1;
-    git_object *treeish = nullptr;
-    git_reference *ref = nullptr;
-    ZABUTON_ENSURE_LIBGIT2_NOERROR(env, git_revparse_ext(&treeish, &ref, repo, refspec));
-    ZABUTON_MAKE_SCOPE([&]() {
-        git_object_free(treeish);
-        git_reference_free(ref);
-    });
-    ctx->Accept();
-    ZABUTON_ENSURE_LIBGIT2_NOERROR(env, git_checkout_tree(repo, treeish, &opts));
 
-    const char* canonicalName = GetCanonicalReferenceName(ref);
+    git_annotated_commit *commit = nullptr;
+
+    {
+        git_reference *ref = nullptr;
+
+        if (git_reference_dwim(&ref, repo, refspec) == GIT_OK) {
+            ZABUTON_MAKE_SCOPE([&]() { git_reference_free(ref); });
+            ZABUTON_ENSURE_LIBGIT2_NOERROR(env, git_annotated_commit_from_ref(&commit, repo, ref));
+        } else {
+            git_object *obj = nullptr;
+            ZABUTON_ENSURE_LIBGIT2_NOERROR(env, git_revparse_single(&obj, repo, refspec));
+            ZABUTON_MAKE_SCOPE([&]() { git_object_free(obj); });
+            ZABUTON_ENSURE_LIBGIT2_NOERROR(env, git_annotated_commit_lookup(&commit, repo, git_object_id(obj)));
+        }
+    }
+
+    git_commit *targetCommit = nullptr;
+    ZABUTON_ENSURE_LIBGIT2_NOERROR(env, git_commit_lookup(&targetCommit, repo, git_annotated_commit_id(commit)));
+    ZABUTON_MAKE_SCOPE([&]() { git_commit_free(targetCommit); });
+
+    ctx->Accept();
+    ZABUTON_ENSURE_LIBGIT2_NOERROR(env, git_checkout_tree(repo, reinterpret_cast<const git_object*>(targetCommit), &opts));
+
+    const char* canonicalName = git_annotated_commit_ref(commit);
     const char* remoteRefPrefix = "refs/remotes/";
     std::string refName = strncmp(remoteRefPrefix, canonicalName, strlen(remoteRefPrefix)) == 0
-            ? GetLocalReferenceNameFromRemoteName(env, repo, canonicalName)
-            : canonicalName;
+                          ? GetLocalReferenceNameFromRemoteName(env, repo, canonicalName)
+                          : canonicalName;
     if (refName.empty()) {
         return;
     }
 
-    git_reference* createdBranchRef = nullptr;
-    {
-        const char* headRefPrefix = "refs/heads/";
-        std::string localRefName = refName.substr(strlen(headRefPrefix));
-        int r = git_branch_lookup(&createdBranchRef, repo, localRefName.c_str(), GIT_BRANCH_LOCAL);
+    if (git_annotated_commit_ref(commit)) {
+        git_reference* newBranchRef = nullptr;
+        const char* headsRefPrefix = "refs/heads/";
+        std::string localRefName = refName.substr(strlen(headsRefPrefix));
+        int r = git_branch_lookup(&newBranchRef, repo, localRefName.c_str(), GIT_BRANCH_LOCAL);
         if (r == 0) {
-            git_reference_free(createdBranchRef);
+            git_reference_free(newBranchRef);
         } else if (r == GIT_ENOTFOUND) {
             ZABUTON_ENSURE_LIBGIT2_NOERROR(env, git_branch_create(
-                    &createdBranchRef,
+                    &newBranchRef,
                     repo,
                     refName.substr(strlen("refs/heads/")).c_str(),
-                    reinterpret_cast<const git_commit*>(treeish), 0));
+                    targetCommit, 0));
         } else {
             ensureNoErrorLibGit2(env, r);
             return;
         }
+        ZABUTON_ENSURE_LIBGIT2_NOERROR(env, git_repository_set_head(repo, refName.c_str()));
+    } else {
+        ZABUTON_ENSURE_LIBGIT2_NOERROR(env, git_repository_set_head_detached_from_annotated(repo, commit));
     }
-    ZABUTON_ENSURE_LIBGIT2_NOERROR(env, git_repository_set_head(repo, refName.c_str()));
 }
 
 extern "C"
@@ -464,7 +526,9 @@ Java_io_github_sh4_zabuton_git_Repository_fetch(JNIEnv *env, jobject this_, jstr
     opts.callbacks.sideband_progress = [](const char *str, int len, void *payload) -> int {
         auto p = reinterpret_cast<FetchProgressReporter*>(payload);
         assert(p != nullptr);
-        p->GetContext()->SetSideBandMessage(std::string(str, static_cast<size_t>(len)));
+        if (len > 0) {
+            p->GetContext()->SetSideBandMessage(std::string(str, static_cast<size_t>(len)));
+        }
         return 0; // Note:  Return a negative value to cancel the network operation.
     };
     opts.download_tags = GIT_REMOTE_DOWNLOAD_TAGS_AUTO;
@@ -537,6 +601,42 @@ Java_io_github_sh4_zabuton_git_Repository_getRemoteBranchNames(JNIEnv *env, jobj
     git_repository *repo = GetGitRepository(env, this_);
     jobjectArray refArray = GetBranchReferenceNameArray(env, repo, GIT_BRANCH_REMOTE);
     return refArray;
+}
+
+extern "C"
+JNIEXPORT jobjectArray JNICALL
+Java_io_github_sh4_zabuton_git_Repository_getTagNames(JNIEnv *env, jobject this_)
+{
+    git_repository *repo = GetGitRepository(env, this_);
+    jobjectArray refArray = GetTagReferenceNameArray(env, repo);
+    return refArray;
+}
+
+extern "C"
+JNIEXPORT void JNICALL
+Java_io_github_sh4_zabuton_git_Repository_log(JNIEnv *env, jobject this_, jobject callback)
+{
+    git_repository *repo = GetGitRepository(env, this_);
+    git_revwalk *walker = nullptr;
+
+    ZABUTON_ENSURE_LIBGIT2_NOERROR(env, git_revwalk_new(&walker, repo));
+    ZABUTON_MAKE_SCOPE([&]() { git_revwalk_free(walker); });
+    git_revwalk_sorting(walker, GIT_SORT_TIME);
+
+    ZABUTON_ENSURE_LIBGIT2_NOERROR(env, git_revwalk_push_head(walker));
+
+    git_oid oid;
+    git_commit *commit = nullptr;
+    ZABUTON_MAKE_SCOPE([&]() { git_commit_free(commit); });
+    while(!git_revwalk_next(&oid, walker)) {
+        if (commit != nullptr) {
+            git_commit_free(commit);
+            commit = nullptr;
+        }
+        ZABUTON_ENSURE_LIBGIT2_NOERROR(env, git_commit_lookup(&commit, repo, &oid));
+        jobject commitObject = GetCommitObject(env, commit);
+
+   }
 }
 
 extern "C"
