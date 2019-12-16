@@ -133,4 +133,17 @@ class LibGit2Test {
         val tags = repos.tagNames
         Assert.assertTrue(tags.isNotEmpty())
     }
+
+    @Test
+    fun logs() {
+        val context = InstrumentationRegistry.getInstrumentation().targetContext
+        initializeLibGit2(context)
+        val reposPath = context.getDir("test-repos", Context.MODE_PRIVATE)
+        reposPath.deleteRecursively()
+        val repos = ensureRepositoryOpened(reposPath)
+        repos.log { commit ->
+            Assert.assertNotNull(commit)
+            return@log true
+        }
+    }
 }

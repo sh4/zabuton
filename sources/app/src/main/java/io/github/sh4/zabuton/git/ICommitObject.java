@@ -7,6 +7,5 @@ public interface ICommitObject {
     List<String> getParentCommitIds();
     User getAuthor();
     User getCommitter();
-    Date getWhenSignature();
     String getMessage();
 }

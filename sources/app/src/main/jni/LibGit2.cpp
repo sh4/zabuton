@@ -321,24 +321,59 @@ jobjectArray GetTagReferenceNameArray(JNIEnv* env, git_repository* repo)
     return tagArray;
 }
 
-jobject GetCommitObject(JNIEnv *env, git_commit* commit) {
-    jclass commitObjectClass = env->FindClass("io/github/sh4/zabuton/git/CommitObject");
-    jclass userClass = env->FindClass("io/github/sh4/zabuton/git/User");
+jobject GetUserObject(JNIEnv *env, const git_signature *sig) {
+    jstring name;
+    jstring email;
+    jobject whenSignature = nullptr;
 
-    jmethodID commitObjectCtor = env->GetMethodID(commitObjectClass, "<init>",
-            "(Ljava/util/List;Lio/github/sh4/zabuton/git/User;Lio/github/sh4/zabuton/git/User;Ljava/util/Date;Ljava/lang/String;)V");
-    jmethodID userCtor = env->GetMethodID(userClass, "<init>",
-            "(Ljava/lang/String;Ljava/lang/String;)V");
-
-    unsigned int parents = git_commit_parentcount(commit);
-
-    if (parents > 0) {
+    if (sig) {
+        name = env->NewStringUTF(sig->name);
+        email = env->NewStringUTF(sig->email);
+        jclass dateClass = env->FindClass("java/util/Date");
+        jmethodID dateCtor = env->GetMethodID(dateClass, "<init>", "(J)V");
+        const int64_t milliseconds = 1000LL;
+        jlong date = sig->when.time + (sig->when.offset * sig->when.sign) * milliseconds;
+        whenSignature = env->NewObject(dateClass, dateCtor, date);
+    } else {
+        name = env->NewStringUTF("");
+        email = env->NewStringUTF("");
     }
 
+    jclass userClass = env->FindClass("io/github/sh4/zabuton/git/User");
+    jmethodID userCtor = env->GetMethodID(userClass, "<init>",
+                                          "(Ljava/lang/String;Ljava/lang/String;Ljava/util/Date;)V");
+    return env->NewObject(userClass, userCtor, name, email, whenSignature);
+}
 
-    env->NewObject(commitObjectClass, commitObjectCtor, nullptr);
+jobject GetCommitObject(JNIEnv *env, git_commit* commit) {
+    jobject parentIdList;
+    {
+        unsigned int parents = git_commit_parentcount(commit);
+        jobjectArray parentsIds =
+                env->NewObjectArray(static_cast<jsize>(parents), env->FindClass("java/lang/String"), nullptr);
+        if (parents > 0) {
+            char buf[GIT_OID_HEXSZ + 1];
+            for (unsigned int i = 0; i < parents; i++) {
+                git_oid_tostr(buf, GIT_OID_HEXSZ, git_commit_parent_id(commit, i));
+                jstring commitId = env->NewStringUTF(buf);
+                env->SetObjectArrayElement(parentsIds, i, commitId);
+            }
+        }
 
-    return nullptr;
+        jclass arraysClass = env->FindClass("java/util/Arrays");
+        jmethodID asListMethod = env->GetStaticMethodID(arraysClass, "asList", "([Ljava/lang/Object;)Ljava/util/List;");
+        parentIdList = env->CallStaticObjectMethod(arraysClass, asListMethod, parentsIds);
+    }
+
+    jobject author = GetUserObject(env, git_commit_author(commit));
+    jobject committer = GetUserObject(env, git_commit_committer(commit));
+    jstring message = env->NewStringUTF(git_commit_message(commit));
+
+    jclass commitObjectClass = env->FindClass("io/github/sh4/zabuton/git/CommitObject");
+    jmethodID commitObjectCtor = env->GetMethodID(commitObjectClass, "<init>",
+            "(Ljava/util/List;Lio/github/sh4/zabuton/git/User;Lio/github/sh4/zabuton/git/User;Ljava/lang/String;)V");
+
+    return env->NewObject(commitObjectClass, commitObjectCtor, parentIdList, author, committer, message);
 }
 
 } // anonymous namespace
@@ -625,9 +660,14 @@ Java_io_github_sh4_zabuton_git_Repository_log(JNIEnv *env, jobject this_, jobjec
 
     ZABUTON_ENSURE_LIBGIT2_NOERROR(env, git_revwalk_push_head(walker));
 
+    jclass functionClass = env->FindClass("java/util/function/Function");
+    jmethodID applyMethod = env->GetMethodID(functionClass, "apply", "(Ljava/lang/Object;)Ljava/lang/Object;");
+
     git_oid oid;
     git_commit *commit = nullptr;
     ZABUTON_MAKE_SCOPE([&]() { git_commit_free(commit); });
+    jclass boolClass = env->FindClass("java/lang/Boolean");
+    jmethodID boolValueMethod = env->GetMethodID(boolClass, "booleanValue", "()Z");
     while(!git_revwalk_next(&oid, walker)) {
         if (commit != nullptr) {
             git_commit_free(commit);
@@ -635,7 +675,12 @@ Java_io_github_sh4_zabuton_git_Repository_log(JNIEnv *env, jobject this_, jobjec
         }
         ZABUTON_ENSURE_LIBGIT2_NOERROR(env, git_commit_lookup(&commit, repo, &oid));
         jobject commitObject = GetCommitObject(env, commit);
-
+        jobject r = env->CallObjectMethod(callback, applyMethod, commitObject);
+        if (r != nullptr && env->IsInstanceOf(r, boolClass)) {
+            if (!env->CallBooleanMethod(r, boolValueMethod)) {
+                break;
+            }
+        }
    }
 }
 
