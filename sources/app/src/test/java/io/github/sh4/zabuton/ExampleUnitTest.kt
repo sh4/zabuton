@@ -9,6 +9,12 @@ import io.github.sh4.zabuton.workspace.FugaImpl
 import io.github.sh4.zabuton.workspace.Hoge
 import io.github.sh4.zabuton.workspace.HogeImpl
 import io.github.sh4.zabuton.workspace.HogeType
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.channels.Channel
+import kotlinx.coroutines.channels.ClosedReceiveChannelException
+import kotlinx.coroutines.delay
+import kotlinx.coroutines.launch
+import kotlinx.coroutines.runBlocking
 import org.junit.Assert
 import org.junit.Test
 
@@ -21,6 +27,34 @@ class ExampleUnitTest {
     @Test
     fun addition_isCorrect() {
         Assert.assertEquals(4, 2 + 2.toLong())
+    }
+
+    @Test
+    fun corouitneTest() = runBlocking {
+        val channel = Channel<String>(Channel.UNLIMITED)
+        launch {
+            try {
+                repeat(2) {
+                    //channel.close()
+                    delay(1000)
+                    val r = channel.receive()
+                    //channel.receiveOrClosed()
+                    println(r)
+                }
+            } catch (e: ClosedReceiveChannelException) {
+                println(e)
+            }
+            println("ok1")
+        }
+        launch(Dispatchers.Default) {
+            delay(500)
+            repeat(2) {
+                channel.send("hoge-$it")
+            }
+            //channel.close()
+            println("ok2")
+        }
+        println("finished")
     }
 
     @Test

@@ -648,6 +648,36 @@ Java_io_github_sh4_zabuton_git_Repository_getTagNames(JNIEnv *env, jobject this_
 }
 
 extern "C"
+JNIEXPORT jobjectArray JNICALL
+Java_io_github_sh4_zabuton_git_Repository_getRemotes(JNIEnv *env, jobject this_)
+{
+    git_repository *repo = GetGitRepository(env, this_);
+
+    git_strarray remotes = {0};
+    ZABUTON_ENSURE_LIBGIT2_NOERROR_WITH_RETURN(env, git_remote_list(&remotes, repo), nullptr);
+    ZABUTON_MAKE_SCOPE([&] { git_strarray_free(&remotes); });
+
+    jclass remoteClass = env->FindClass("io/github/sh4/zabuton/git/Remote");
+    jmethodID remoteClassCtor = env->GetMethodID(remoteClass, "<init>",
+            "(Ljava/lang/String;Ljava/lang/String;Ljava/lang/String;)V");
+    jobjectArray remoteArray = env->NewObjectArray(static_cast<int>(remotes.count), remoteClass, nullptr);
+    for (int i = 0; i < static_cast<int>(remotes.count); i++)
+    {
+        git_remote* remote = {0};
+        ZABUTON_ENSURE_LIBGIT2_NOERROR_WITH_RETURN(env, git_remote_lookup(&remote, repo, remotes.strings[i]), nullptr);
+        ZABUTON_MAKE_SCOPE([&] { git_remote_free(remote); });
+
+        jstring name = env->NewStringUTF(remotes.strings[i]);
+        jstring fetchUrl = env->NewStringUTF(git_remote_url(remote));
+        jstring pushUrl = env->NewStringUTF(git_remote_pushurl(remote));
+
+        jobject remoteObject = env->NewObject(remoteClass, remoteClassCtor, name, fetchUrl, pushUrl);
+        env->SetObjectArrayElement(remoteArray, i, remoteObject);
+    }
+    return remoteArray;
+}
+
+extern "C"
 JNIEXPORT void JNICALL
 Java_io_github_sh4_zabuton_git_Repository_log(JNIEnv *env, jobject this_, jobject callback)
 {

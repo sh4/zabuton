@@ -5,12 +5,12 @@ import androidx.test.ext.junit.runners.AndroidJUnit4
 import androidx.test.platform.app.InstrumentationRegistry
 import io.github.sh4.zabuton.git.*
 import io.github.sh4.zabuton.workspace.initializeLibGit2
-import org.apache.commons.io.FileUtils
 import org.junit.Assert
 import org.junit.Test
 import org.junit.runner.RunWith
 import java.io.File
 import java.io.IOException
+import java.nio.charset.Charset
 
 @RunWith(AndroidJUnit4::class)
 class LibGit2Test {
@@ -89,11 +89,11 @@ class LibGit2Test {
         initializeLibGit2(context)
         val reposPath = context.getDir("test-repos", Context.MODE_PRIVATE)
         val testFile = File(reposPath, "Test/Files.txt")
-        FileUtils.writeStringToFile(testFile, "Foobar2000", "utf-8")
-        Assert.assertEquals("Foobar2000", FileUtils.readFileToString(testFile, "utf-8"))
+        testFile.writeText("Foobar2000", Charset.defaultCharset());
+        Assert.assertEquals("Foobar2000", testFile.readText(Charset.defaultCharset()))
         val repos = ensureRepositoryOpened(reposPath)
         repos.reset(ResetKind.HARD) { p: ICheckoutProgress? -> }
-        Assert.assertNotEquals("Foobar2000", FileUtils.readFileToString(testFile, "utf-8"))
+        Assert.assertNotEquals("Foobar2000", testFile.readText(Charset.defaultCharset()))
     }
 
     @Test

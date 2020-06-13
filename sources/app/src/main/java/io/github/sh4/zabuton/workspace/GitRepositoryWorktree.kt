@@ -1,13 +1,13 @@
 package io.github.sh4.zabuton.workspace
 
 import android.content.Context
-import io.github.sh4.zabuton.git.LibGit2
-import io.github.sh4.zabuton.git.Repository
-import io.github.sh4.zabuton.git.ResetKind
+import io.github.sh4.zabuton.git.*
 import io.github.sh4.zabuton.util.Progress
 import io.github.sh4.zabuton.util.ProgressContext
 import io.github.sh4.zabuton.util.ProgressType
 import kotlinx.coroutines.*
+import kotlinx.coroutines.channels.Channel
+import kotlinx.coroutines.channels.ClosedReceiveChannelException
 import kotlinx.coroutines.channels.ReceiveChannel
 import java.io.File
 import java.net.URL
@@ -61,6 +61,17 @@ suspend fun createGitRepositoryWorktree(
 class GitRepositoryWorktree(override val workspace: Workspace,
                             override val root: File) : Worktree {
     private val repository = Repository.open(root.canonicalPath)
+
+    val headName: String
+        get() = repository.headName
+    val tagNames: Array<String>
+        get() = repository.tagNames
+    val localBranchNames: Array<String>
+        get() = repository.localBranchNames
+    val remoteBranchNames: Array<String>
+        get() = repository.remoteBranchNames
+    val remotes: Array<Remote>
+        get() = repository.remotes
 
     suspend fun checkout(
             refspec: String,
@@ -118,6 +129,23 @@ class GitRepositoryWorktree(override val workspace: Workspace,
             progress.finish()
         }.join()
         progressContext.finish()
+    }
+
+    suspend fun log(
+            block: suspend CoroutineScope.(commit: ReceiveChannel<ICommitObject>) -> Unit
+    ) = coroutineScope {
+        val channel = Channel<ICommitObject>()
+        val receiver = launch { block(this, channel) }
+        repository.log(fun (commit:ICommitObject):Boolean {
+            try {
+                launch(Dispatchers.Default) { channel.send(commit) }
+            } catch (_: ClosedReceiveChannelException) {
+                return false
+            }
+            return true
+        })
+        channel.close()
+        receiver.join()
     }
 
     override fun deletePermanently() {

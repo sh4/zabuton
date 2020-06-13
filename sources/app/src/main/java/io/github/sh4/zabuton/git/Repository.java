@@ -29,6 +29,7 @@ public class Repository {
     public native String[] getRemoteBranchNames();
     public native String[] getLocalBranchNames();
     public native String[] getTagNames();
+    public native Remote[] getRemotes();
 
     public native void log(Function<ICommitObject, Boolean> callback);
 
