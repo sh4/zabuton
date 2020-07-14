@@ -5,7 +5,7 @@ export MAKEFLAGS="-j $MAKE_JOB_COUNT"
 export SCRIPT_ROOT="$(dirname "${BASH_SOURCE:-$0}")"
 export ZABUTON_ROOT="$(realpath $SCRIPT_ROOT/../)"
 export BUILD_ROOT=$ZABUTON_ROOT/build
-export ANDROID_NDK_HOME=$BUILD_ROOT/android-ndk-r20
+export ANDROID_NDK_HOME=$BUILD_ROOT/android-ndk-r21b
 export ANDROID_NDK_TOOLCHAIN_ROOT=$ANDROID_NDK_HOME/toolchains/llvm/prebuilt/linux-x86_64
 export TARGET_PREFIX=$BUILD_ROOT/root/target
 export TARGET_LIBRARY_PREFIX=$BUILD_ROOT/root/target-lib
@@ -27,7 +27,7 @@ fetch_source ()
         _fetch_source http://isl.gforge.inria.fr/isl-0.20.tar.xz
         ;;
     "mpfr")
-        _fetch_source https://www.mpfr.org/mpfr-current/mpfr-4.0.2.tar.xz
+        _fetch_source https://ftp.gnu.org/gnu/mpfr/mpfr-4.1.0.tar.xz
         ;;
     "mpc")
         _fetch_source https://ftp.gnu.org/gnu/mpc/mpc-1.1.0.tar.gz

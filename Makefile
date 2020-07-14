@@ -1,5 +1,7 @@
 ZABUTON_ROOT := $(dir $(abspath $(lastword $(MAKEFILE_LIST))))
 BUILD_ROOT := $(ZABUTON_ROOT)build/
+ANDROID_NDK := $(BUILD_ROOT)android-ndk-r21b-linux-x86_64.zip
+NDK_BUILD := $(BUILD_ROOT)android-ndk-r21b/ndk-build
 BUILD_TOOLCHAIN := $(ZABUTON_ROOT)resources/build_toolchain.sh
 BUILD_COMMAND := @CLEAN=$(CLEAN) $(BUILD_TOOLCHAIN) build
 ZABUTON_ASSETS_ROOT := $(ZABUTON_ROOT)sources/app/src/main/assets/build
@@ -35,7 +37,6 @@ TARGET_GCC_LIBS := \
 	$(TARGET_GCC_LIB_ROOT)/lib/libmpfr.a \
 	$(TARGET_GCC_LIB_ROOT)/lib/libmpc.a \
 	$(TARGET_GCC_LIB_ROOT)/lib/libisl.a
-NDK_BUILD := $(BUILD_ROOT)android-ndk-r20/ndk-build
 
 CLEAN := false
 
@@ -126,5 +127,5 @@ $(TARGET_LIB_ROOT)/lib/libssl.a: $(NDK_BUILD)
 $(TARGET_LIB_ROOT)/lib/libiconv.a: $(NDK_BUILD)
 	$(BUILD_COMMAND) target libiconv
 
-$(NDK_BUILD): $(BUILD_ROOT)android-ndk-r20-linux-x86_64.zip
+$(NDK_BUILD): $(ANDROID_NDK)
 	unzip -DD -o $< -d $(BUILD_ROOT)

@@ -370,6 +370,7 @@ build_target_avrlibc ()
     { [ -f Makefile ] || \
     CFLAGS="$target_cflags" \
     CXXFLAGS="$target_cxxflags" \
+    LD_LIBRARY_PATH=$NATIVE_PREFIX/lib \
     PATH=$avrpath \
     AR=avr-ar \
     AS=avr-as \
@@ -381,8 +382,12 @@ build_target_avrlibc ()
         --prefix=$TARGET_PREFIX \
         --host=avr \
     || exit $?; } && \
-    PATH=$avrpath make -j $MAKE_JOB_COUNT && \
-    PATH=$avrpath make install -j $MAKE_JOB_COUNT \
+    LD_LIBRARY_PATH=$NATIVE_PREFIX/lib \
+    PATH=$avrpath \
+    make -j $MAKE_JOB_COUNT && \
+    LD_LIBRARY_PATH=$NATIVE_PREFIX/lib \
+    PATH=$avrpath \
+    make install -j $MAKE_JOB_COUNT \
     || exit $?
 }
 

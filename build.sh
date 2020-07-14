@@ -35,10 +35,10 @@ fi
 
 case "$1" in
 "docker")
-    if [ ! -f "android-ndk-*.zip" ]; then
-        echo "ERROR: Android NDK (android-ndk-*.zip) is not found on repository root.">&2
+    if [ ! -f "$root/build/android-ndk-*-linux-x86_64.zip" ]; then
+        echo "ERROR: Android NDK Linux 64-bit (x86) (android-ndk-*-linux-x86_64.zip) is not found on repository 'build' dir.">&2
         echo "">&2
-        echo "You need Android NDK for linux to build the toolchain. Please obtain from the following.">&2
+        echo "You need Android NDK to build the toolchain. Please obtain from the following.">&2
         echo "https://developer.android.com/ndk/downloads">&2
         echo "">&2
         usage
